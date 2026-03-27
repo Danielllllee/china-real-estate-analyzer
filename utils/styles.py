@@ -1,4 +1,4 @@
-"""全局样式系统 — 统一的CSS和UI组件"""
+"""全局样式系统 — 统一的CSS和UI组件 v2"""
 import streamlit as st
 
 # 配色方案
