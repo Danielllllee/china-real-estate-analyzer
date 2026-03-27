@@ -7,7 +7,9 @@ import plotly.graph_objects as go
 import pandas as pd
 import yaml
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
 
 from analysis.metrics import get_district_detail, calculate_affordability
 from analysis.risk import assess_market_risk

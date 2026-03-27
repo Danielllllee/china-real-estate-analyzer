@@ -7,7 +7,9 @@ import plotly.graph_objects as go
 import pandas as pd
 import yaml
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _ROOT not in sys.path:
+    sys.path.insert(0, _ROOT)
 
 from analysis.metrics import get_city_overview
 from analysis.advisor import generate_city_summary
