@@ -27,72 +27,7 @@ def init_db():
     """初始化数据库表结构"""
     with get_connection() as conn:
         conn.executescript("""
-        -- 小区基础信息
-        CREATE TABLE IF NOT EXISTS communities (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            city TEXT NOT NULL,
-            district TEXT NOT NULL,
-            name TEXT NOT NULL,
-            address TEXT,
-            build_year INTEGER,
-            total_units INTEGER,
-            property_fee REAL,
-            latitude REAL,
-            longitude REAL,
-            UNIQUE(city, district, name)
-        );
-
-        -- 挂牌数据
-        CREATE TABLE IF NOT EXISTS listings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            community_id INTEGER NOT NULL,
-            title TEXT,
-            area REAL NOT NULL,
-            total_price REAL NOT NULL,
-            unit_price REAL NOT NULL,
-            floor_level TEXT,
-            decoration TEXT,
-            orientation TEXT,
-            bedroom_count INTEGER,
-            listing_date TEXT,
-            source TEXT DEFAULT 'beike',
-            crawl_date TEXT NOT NULL,
-            FOREIGN KEY (community_id) REFERENCES communities(id)
-        );
-
-        -- 真实成交数据
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            community_id INTEGER NOT NULL,
-            area REAL NOT NULL,
-            total_price REAL NOT NULL,
-            unit_price REAL NOT NULL,
-            listing_price REAL,
-            floor_level TEXT,
-            decoration TEXT,
-            orientation TEXT,
-            bedroom_count INTEGER,
-            deal_date TEXT NOT NULL,
-            deal_cycle INTEGER,
-            source TEXT DEFAULT 'beike',
-            FOREIGN KEY (community_id) REFERENCES communities(id)
-        );
-
-        -- 租金数据
-        CREATE TABLE IF NOT EXISTS rentals (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            community_id INTEGER NOT NULL,
-            area REAL NOT NULL,
-            monthly_rent REAL NOT NULL,
-            rent_per_sqm REAL NOT NULL,
-            bedroom_count INTEGER,
-            decoration TEXT,
-            listing_date TEXT,
-            source TEXT DEFAULT 'beike',
-            FOREIGN KEY (community_id) REFERENCES communities(id)
-        );
-
-        -- 区域统计快照（按月）
+        -- 区域统计（仅存储经过核实的真实数据）
         CREATE TABLE IF NOT EXISTS district_stats (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             city TEXT NOT NULL,
@@ -107,79 +42,39 @@ def init_db():
             avg_deal_cycle INTEGER,
             UNIQUE(city, district, month)
         );
-
-        -- 土地出让数据
-        CREATE TABLE IF NOT EXISTS land_sales (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            city TEXT NOT NULL,
-            district TEXT NOT NULL,
-            land_area REAL,
-            floor_area_ratio REAL,
-            floor_price REAL NOT NULL,
-            total_price REAL,
-            sale_date TEXT NOT NULL,
-            buyer TEXT
-        );
-
-        -- 板块数据
-        CREATE TABLE IF NOT EXISTS sectors (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            city TEXT NOT NULL,
-            district TEXT NOT NULL,
-            sector_name TEXT NOT NULL,
-            avg_unit_price REAL,
-            avg_rent_per_sqm REAL,
-            community_count INTEGER,
-            description TEXT,
-            UNIQUE(city, district, sector_name)
-        );
-
-        -- 典型成交案例
-        CREATE TABLE IF NOT EXISTS deal_cases (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            city TEXT NOT NULL,
-            district TEXT NOT NULL,
-            sector_name TEXT,
-            community_name TEXT NOT NULL,
-            deal_year INTEGER NOT NULL,
-            area REAL NOT NULL,
-            bedroom_count INTEGER,
-            total_price_wan REAL NOT NULL,
-            unit_price REAL NOT NULL,
-            current_value_wan REAL,
-            profit_loss_wan REAL,
-            annualized_return REAL,
-            description TEXT
-        );
-
-        -- 宏观经济数据
-        CREATE TABLE IF NOT EXISTS macro_data (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            city TEXT NOT NULL,
-            year INTEGER NOT NULL,
-            population REAL,
-            gdp REAL,
-            gdp_growth REAL,
-            disposable_income REAL,
-            income_growth REAL,
-            cpi REAL,
-            UNIQUE(city, year)
-        );
         """)
 
 
 def ensure_data():
-    """确保数据库已初始化且有数据（首次运行时自动生成）"""
-    init_db()
-    with get_connection() as conn:
-        ds_count = conn.execute("SELECT COUNT(*) FROM district_stats").fetchone()[0]
-        # 检查是否有残留的虚假数据需要清理
-        fake_count = conn.execute("SELECT COUNT(*) FROM communities").fetchone()[0]
-        fake_cases = conn.execute("SELECT COUNT(*) FROM deal_cases").fetchone()[0]
-    if ds_count == 0 or fake_count > 0 or fake_cases > 0:
-        # 清空所有表再重新生成
-        import os
-        db_path = get_db_path()
+    """确保数据库已初始化且有真实数据"""
+    import os
+    db_path = get_db_path()
+    # 总是删除旧数据库重建，确保没有残留的虚假数据
+    need_rebuild = False
+    if not os.path.exists(db_path):
+        need_rebuild = True
+    else:
+        try:
+            with get_connection() as conn:
+                # 检查是否有旧表（虚假数据残留）
+                tables = [r[0] for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'"
+                ).fetchall()]
+                fake_tables = {'communities', 'listings', 'transactions',
+                               'rentals', 'deal_cases', 'land_sales',
+                               'sectors', 'macro_data'}
+                if fake_tables & set(tables):
+                    need_rebuild = True
+                # 检查是否有数据
+                ds_count = conn.execute(
+                    "SELECT COUNT(*) FROM district_stats"
+                ).fetchone()[0]
+                if ds_count == 0:
+                    need_rebuild = True
+        except Exception:
+            need_rebuild = True
+
+    if need_rebuild:
         if os.path.exists(db_path):
             os.remove(db_path)
         init_db()

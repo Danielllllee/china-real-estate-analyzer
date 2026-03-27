@@ -1,9 +1,7 @@
-"""区域深度分析页面 — Premium UI 版本"""
+"""区域分析页面 — 仅展示真实数据"""
 import sys
 import os
 import streamlit as st
-import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
 import yaml
 
@@ -11,23 +9,16 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-from analysis.metrics import get_district_detail, calculate_affordability
-from analysis.risk import assess_market_risk
-from analysis.advisor import generate_district_report
-from models.composite import composite_valuation
+from core.database import query_df
 from core.styles import (
-    inject_global_css, hero_section, metric_card, score_badge,
-    status_tag, content_card, case_card, apply_plotly_style,
-    get_district_names, PLOTLY_COLORS, COLORS,
+    inject_global_css, hero_section, metric_card,
+    get_district_names, COLORS,
 )
 
 st.set_page_config(page_title="区域分析", page_icon="📊", layout="wide")
-
-# ── 全局样式 ──────────────────────────────────────────────────
 inject_global_css()
 
-
-# ── 配置加载 ──────────────────────────────────────────────────
+# ── 配置加载 ──
 @st.cache_data
 def load_config():
     config_path = os.path.join(
@@ -37,10 +28,9 @@ def load_config():
     with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
-
 config = load_config()
 
-# ── 城市 / 区域选择 ──────────────────────────────────────────
+# ── 城市 / 区域选择 ──
 col_sel1, col_sel2, _ = st.columns([1, 1, 2])
 city_names = {k: v["name"] for k, v in config["cities"].items()}
 with col_sel1:
@@ -54,251 +44,65 @@ with col_sel2:
                            format_func=lambda i: district_display[i], label_visibility="collapsed")
     selected_district = district_actual[sel_idx]
 
-# ── 生成报告 ─────────────────────────────────────────────────
-with st.spinner("正在生成智能分析报告..."):
-    report = generate_district_report(selected_city, selected_district)
+# ── 获取数据 ──
+latest = query_df("""
+    SELECT avg_unit_price FROM district_stats
+    WHERE city = ? AND district = ?
+    ORDER BY month DESC LIMIT 1
+""", [selected_city, selected_district])
 
-if "error" in report:
-    st.warning(report["error"])
+if latest.empty or latest.iloc[0]["avg_unit_price"] is None:
+    st.warning("暂无该区域数据")
     st.stop()
 
-metrics = report["key_metrics"]
+avg_price = latest.iloc[0]["avg_unit_price"]
 
-# ── Hero 顶部结论卡片 ────────────────────────────────────────
-verdict_tag = status_tag(report["verdict"])
-badge_html = score_badge(report["score"])
+# ── 展示 ──
+hero_section(
+    f"{selected_city} · {selected_district}",
+    f"二手房挂牌均价数据（来源：安居客/房天下/中国房价行情等平台）",
+)
 
-st.markdown(f"""
-<div class="hero-section animate-in" style="padding:32px 40px;">
-    <div style="display:flex;align-items:center;gap:24px;margin-bottom:20px;position:relative;">
-        {badge_html}
-        <div>
-            <h1 style="margin:0 0 6px;font-size:28px;">{selected_city} · {selected_district}</h1>
-            <div style="display:flex;align-items:center;gap:12px;">
-                {verdict_tag}
-                <span style="font-size:14px;color:#94a3b8;">{report.get('verdict_reason', '')}</span>
-            </div>
-        </div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:16px;position:relative;">
-        <div style="text-align:center;">
-            <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">均价</div>
-            <div style="font-size:22px;font-weight:700;color:white;margin-top:4px;">{metrics['avg_price']:,}<span style="font-size:12px;font-weight:400;color:#94a3b8;"> 元/㎡</span></div>
-        </div>
-        <div style="text-align:center;">
-            <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">租金回报</div>
-            <div style="font-size:22px;font-weight:700;color:#10b981;margin-top:4px;">{metrics['annual_yield_pct']}%</div>
-        </div>
-        <div style="text-align:center;">
-            <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">近1年涨跌</div>
-            <div style="font-size:22px;font-weight:700;color:{'#10b981' if metrics['price_trend_1y_pct'] >= 0 else '#ef4444'};margin-top:4px;">{metrics['price_trend_1y_pct']:+.1f}%</div>
-        </div>
-        <div style="text-align:center;">
-            <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">去化周期</div>
-            <div style="font-size:22px;font-weight:700;color:white;margin-top:4px;">{metrics['months_of_supply']}<span style="font-size:12px;font-weight:400;color:#94a3b8;"> 月</span></div>
-        </div>
-        <div style="text-align:center;">
-            <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">成交量</div>
-            <div style="font-size:22px;font-weight:700;color:white;margin-top:4px;">{metrics['txn_count']}<span style="font-size:12px;font-weight:400;color:#94a3b8;"> 套/月</span></div>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+c1, c2, c3 = st.columns(3)
+with c1:
+    st.markdown(metric_card("🏠", "二手房均价", f"{avg_price:,.0f} 元/㎡"), unsafe_allow_html=True)
+with c2:
+    total_90 = avg_price * 90 / 10000
+    st.markdown(metric_card("📐", "90㎡总价", f"{total_90:.0f} 万元"), unsafe_allow_html=True)
+with c3:
+    total_120 = avg_price * 120 / 10000
+    st.markdown(metric_card("🏗", "120㎡总价", f"{total_120:.0f} 万元"), unsafe_allow_html=True)
 
-# ── 主内容 Tabs ──────────────────────────────────────────────
-tab1, tab2, tab4 = st.tabs(["📖 投资解读", "🏘️ 板块分析", "⚠️ 风险与估值"])
+# ── 同城对比 ──
+st.markdown("---")
+st.markdown(f'<h3 style="color:{COLORS["primary"]};">同城各区域均价对比</h3>', unsafe_allow_html=True)
 
-# ============================================================
-# Tab 1 — 投资解读
-# ============================================================
-with tab1:
-    plain_report = report.get("plain_text_report", "")
-    if plain_report:
-        # Split by markdown headings (## or ###) to create section cards
-        import re
-        sections = re.split(r'\n(?=#{2,3}\s)', plain_report.strip())
-        for section in sections:
-            section = section.strip()
-            if not section:
-                continue
-            # Extract heading
-            heading_match = re.match(r'^(#{2,3})\s+(.+)', section)
-            if heading_match:
-                title = heading_match.group(2).strip()
-                body = section[heading_match.end():].strip()
-            else:
-                title = "分析概要"
-                body = section
-            # Convert remaining markdown to simple HTML
-            body_html = body.replace("\n\n", "<br><br>").replace("\n- ", "<br>• ").replace("\n", "<br>")
-            content_card(title, f'<div style="font-size:14px;color:#4a5568;line-height:1.8;">{body_html}</div>')
+all_districts = query_df("""
+    SELECT district, avg_unit_price FROM district_stats
+    WHERE city = ? AND month = (SELECT MAX(month) FROM district_stats WHERE city = ?)
+    ORDER BY avg_unit_price DESC
+""", [selected_city, selected_city])
 
-    # Score details table
-    if report.get("score_details"):
-        st.markdown("")
-        score_df = pd.DataFrame(report["score_details"], columns=["指标", "说明", "分数"])
-        content_card(
-            "评分明细",
-            score_df.to_html(index=False, classes="", border=0,
-                             escape=False,
-                             table_id="score-table"),
-        )
-        st.markdown("""<style>
-        #score-table { width:100%; border-collapse:collapse; font-size:14px; }
-        #score-table th { background:#f8f9fc; padding:10px 12px; text-align:left; font-weight:600; color:#334155; border-bottom:2px solid #e2e8f0; }
-        #score-table td { padding:10px 12px; border-bottom:1px solid #f0f0f5; color:#4a5568; }
-        #score-table tr:hover td { background:#fafbfd; }
-        </style>""", unsafe_allow_html=True)
+if not all_districts.empty:
+    import plotly.express as px
+    from core.styles import apply_plotly_style, PLOTLY_COLORS
 
-# ============================================================
-# Tab 2 — 板块分析
-# ============================================================
-with tab2:
-    sectors = report.get("sector_recommendations", [])
-    if sectors:
-        sector_df = pd.DataFrame(sectors)
+    fig = px.bar(
+        all_districts.sort_values("avg_unit_price", ascending=True),
+        y="district", x="avg_unit_price", orientation="h",
+        labels={"district": "区域", "avg_unit_price": "均价（元/㎡）"},
+        color_discrete_sequence=PLOTLY_COLORS,
+        text="avg_unit_price",
+    )
+    fig.update_traces(texttemplate="%{text:,.0f}", textposition="outside")
+    apply_plotly_style(fig, max(360, len(all_districts) * 40))
+    fig.update_layout(yaxis_title="", xaxis_title="均价（元/㎡）")
 
-        col_chart1, col_chart2 = st.columns(2)
-        with col_chart1:
-            fig_bar = px.bar(
-                sector_df.sort_values("avg_price"),
-                y="name", x="avg_price", orientation="h",
-                color="yield_pct",
-                color_continuous_scale="RdYlGn",
-                labels={"name": "板块", "avg_price": "均价（元/㎡）", "yield_pct": "租金回报%"},
-                title="各板块均价及租金回报率",
-            )
-            apply_plotly_style(fig_bar, height=max(300, len(sectors) * 45))
-            fig_bar.update_layout(showlegend=False)
-            st.plotly_chart(fig_bar, use_container_width=True)
+    # 高亮当前选中的区域
+    colors = [COLORS["accent"] if d == selected_district else PLOTLY_COLORS[0]
+              for d in all_districts.sort_values("avg_unit_price", ascending=True)["district"]]
+    fig.update_traces(marker_color=colors)
 
-        with col_chart2:
-            fig_yield = px.bar(
-                sector_df.sort_values("yield_pct", ascending=True),
-                y="name", x="yield_pct", orientation="h",
-                color="recommendation",
-                color_discrete_map={
-                    "重点推荐": COLORS["success"],
-                    "值得关注": COLORS["warning"],
-                    "性价比一般": COLORS["danger"],
-                },
-                labels={"name": "板块", "yield_pct": "租金回报率（%）"},
-                title="各板块租金回报率排名",
-            )
-            apply_plotly_style(fig_yield, height=max(300, len(sectors) * 45))
-            st.plotly_chart(fig_yield, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 
-        # Styled sector table
-        display_df = sector_df.copy()
-        display_df.columns = ["板块", "均价(元/㎡)", "月租金(元/㎡)", "租金回报(%)", "小区数", "投资建议"]
-        st.markdown("")
-        content_card(
-            "板块数据明细",
-            display_df.to_html(index=False, classes="", border=0,
-                               escape=False,
-                               table_id="sector-table"),
-        )
-        st.markdown("""<style>
-        #sector-table { width:100%; border-collapse:collapse; font-size:14px; }
-        #sector-table th { background:#f8f9fc; padding:10px 12px; text-align:left; font-weight:600; color:#334155; border-bottom:2px solid #e2e8f0; }
-        #sector-table td { padding:10px 12px; border-bottom:1px solid #f0f0f5; color:#4a5568; }
-        #sector-table tr:hover td { background:#fafbfd; }
-        </style>""", unsafe_allow_html=True)
-    else:
-        st.info("暂无板块级数据")
-
-# ============================================================
-# Tab 4 — 风险与估值
-# ============================================================
-with tab4:
-    # ── 风险评估 ──
-    risk = report.get("risk")
-    if risk:
-        st.markdown("")
-        r1, r2, r3, r4 = st.columns(4)
-        with r1:
-            st.markdown(metric_card("🎯", "风险评分", f"{risk['risk_score']}/100"), unsafe_allow_html=True)
-        with r2:
-            st.markdown(metric_card("📊", "风险等级", risk["risk_level"]), unsafe_allow_html=True)
-        with r3:
-            st.markdown(metric_card("📈", "价格波动率", f"{risk['volatility']*100:.1f}%"), unsafe_allow_html=True)
-        with r4:
-            st.markdown(metric_card("🏠", "库存去化月数", f"{risk['months_of_inventory']:.1f}"), unsafe_allow_html=True)
-
-        if risk.get("risk_factors"):
-            factors_html = "".join(
-                f'<div style="padding:10px 16px;background:#fef2f2;border-radius:8px;margin-bottom:8px;'
-                f'border-left:3px solid #ef4444;font-size:14px;color:#991b1b;">'
-                f'⚠️ {rf}</div>'
-                for rf in risk["risk_factors"]
-            )
-            content_card("风险因素", factors_html)
-
-    # ── 购房负担分析 ──
-    afford = report.get("affordability")
-    if afford:
-        st.markdown("")
-        st.markdown('<div style="margin-top:12px;"></div>', unsafe_allow_html=True)
-        a1, a2, a3 = st.columns(3)
-        with a1:
-            st.markdown(metric_card("💰", "90㎡总价", f"{afford['total_price']/10000:.0f}万元"), unsafe_allow_html=True)
-        with a2:
-            st.markdown(metric_card("📐", "房价收入比", f"{afford['price_to_income_ratio']}"), unsafe_allow_html=True)
-        with a3:
-            st.markdown(metric_card("💳", "月供收入比", f"{afford['payment_to_income_ratio']:.0%}"), unsafe_allow_html=True)
-
-        content_card("负担评估", f'<div style="font-size:14px;color:#4a5568;line-height:1.8;">{afford["assessment"]}</div>')
-
-    # ── 综合估值 ──
-    detail = get_district_detail(selected_city, selected_district)
-    latest_stats = detail.get("latest_stats")
-    if latest_stats is not None and not latest_stats.empty:
-        current_avg_price = latest_stats.iloc[0]["avg_unit_price"]
-        valuation = composite_valuation(
-            selected_city, selected_district,
-            current_price_per_sqm=current_avg_price,
-        )
-        if "error" not in valuation:
-            comp = valuation["composite"]
-            st.markdown("")
-            st.markdown('<div style="margin-top:12px;"></div>', unsafe_allow_html=True)
-            v1, v2, v3 = st.columns(3)
-            with v1:
-                st.markdown(metric_card("🔻", "保守估值", f"{comp['conservative_value']:,} 元/㎡"), unsafe_allow_html=True)
-            with v2:
-                st.markdown(metric_card("⚖️", "中性估值", f"{comp['fair_value_per_sqm']:,} 元/㎡"), unsafe_allow_html=True)
-            with v3:
-                st.markdown(metric_card("🔺", "乐观估值", f"{comp['optimistic_value']:,} 元/㎡"), unsafe_allow_html=True)
-
-            if "composite_assessment" in valuation:
-                ca = valuation["composite_assessment"]
-                content_card(
-                    "估值结论",
-                    f'<div style="font-size:15px;color:#1a1a2e;font-weight:600;">{ca["recommendation"]}</div>'
-                    f'<div style="font-size:14px;color:#64748b;margin-top:6px;">当前挂牌价偏离综合估值 {ca["deviation_pct"]}</div>',
-                )
-
-    # ── 价格趋势 ──
-    pt = detail.get("price_trend", pd.DataFrame())
-    if isinstance(pt, pd.DataFrame) and not pt.empty:
-        fig_trend = go.Figure()
-        fig_trend.add_trace(go.Scatter(
-            x=pt["month"], y=pt["avg_unit_price"],
-            mode="lines", name="均价",
-            line=dict(color=COLORS["primary"], width=2.5),
-            fill="tozeroy",
-            fillcolor="rgba(15,52,96,0.06)",
-        ))
-        fig_trend.add_trace(go.Scatter(
-            x=pt["month"], y=pt["median_unit_price"],
-            mode="lines", name="中位价",
-            line=dict(color=COLORS["accent"], width=2, dash="dash"),
-        ))
-        fig_trend.update_layout(
-            title="价格趋势",
-            yaxis_title="元/㎡",
-            hovermode="x unified",
-        )
-        apply_plotly_style(fig_trend, height=380)
-        st.plotly_chart(fig_trend, use_container_width=True)
-
+st.caption("注：当前仅展示经过核实的区域均价数据。租金、成交量、历史走势等数据尚未接入真实数据源。")
