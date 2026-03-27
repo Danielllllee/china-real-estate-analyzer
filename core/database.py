@@ -168,6 +168,20 @@ def init_db():
         """)
 
 
+def ensure_data():
+    """确保数据库已初始化且有数据（首次运行时自动生成）"""
+    init_db()
+    with get_connection() as conn:
+        count = conn.execute("SELECT COUNT(*) FROM district_stats").fetchone()[0]
+    if count == 0:
+        from data.sample.generate_sample import generate_all
+        generate_all()
+
+
+# 模块加载时自动确保数据库就绪
+ensure_data()
+
+
 def query_df(sql, params=None):
     """执行查询并返回DataFrame"""
     with get_connection() as conn:

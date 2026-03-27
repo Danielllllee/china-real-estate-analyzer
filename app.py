@@ -18,15 +18,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# 初始化数据库
-if not os.path.exists(get_db_path()):
-    with st.spinner("首次运行，正在初始化数据库和生成示例数据..."):
-        init_db()
-        from data.sample.generate_sample import generate_all
-        generate_all()
-        st.success("数据初始化完成！")
-else:
-    init_db()
+# 数据库在 core.database 导入时自动初始化和生成数据
 
 # 加载配置
 @st.cache_data
