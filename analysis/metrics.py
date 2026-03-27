@@ -1,7 +1,7 @@
 """核心分析指标计算"""
 import pandas as pd
 import numpy as np
-from utils.database import query_df
+from core.database import query_df
 
 
 def get_city_overview(city: str) -> dict:

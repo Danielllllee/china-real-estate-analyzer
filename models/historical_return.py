@@ -6,7 +6,7 @@
 """
 import numpy as np
 from scipy.optimize import brentq
-from utils.database import query_df
+from core.database import query_df
 
 
 def get_historical_prices(city: str, district: str) -> dict:

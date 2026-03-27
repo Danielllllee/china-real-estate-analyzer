@@ -15,7 +15,7 @@ from analysis.metrics import get_district_detail, calculate_affordability
 from analysis.risk import assess_market_risk
 from analysis.advisor import generate_district_report
 from models.composite import composite_valuation
-from utils.styles import (
+from core.styles import (
     inject_global_css, hero_section, metric_card, score_badge,
     status_tag, content_card, case_card, apply_plotly_style,
     get_district_names, PLOTLY_COLORS, COLORS,

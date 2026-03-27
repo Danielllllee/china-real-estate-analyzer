@@ -8,7 +8,7 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from models.composite import composite_valuation
-from utils.styles import inject_global_css, hero_section, metric_card, apply_plotly_style, get_district_names, PLOTLY_COLORS, COLORS
+from core.styles import inject_global_css, hero_section, metric_card, apply_plotly_style, get_district_names, PLOTLY_COLORS, COLORS
 import yaml
 
 st.set_page_config(page_title="估值计算器", page_icon="🧮", layout="wide")

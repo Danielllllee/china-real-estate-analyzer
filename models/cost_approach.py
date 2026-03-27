@@ -10,7 +10,7 @@
 如果市场价远高于重置成本，说明存在投机溢价。
 """
 import numpy as np
-from utils.database import query_df
+from core.database import query_df
 
 
 def get_land_cost(city: str, district: str, recent_years: int = 3) -> dict:

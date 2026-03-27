@@ -9,8 +9,8 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from utils.database import init_db, get_db_path
-from utils.styles import inject_global_css, hero_section, metric_card
+from core.database import init_db, get_db_path
+from core.styles import inject_global_css, hero_section, metric_card
 
 st.set_page_config(
     page_title="房产估值分析系统",

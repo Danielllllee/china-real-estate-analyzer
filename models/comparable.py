@@ -7,8 +7,8 @@
 这是最贴近市场的估值方法。
 """
 import numpy as np
-from utils.database import query_df
-from utils.constants import (
+from core.database import query_df
+from core.constants import (
     DECORATION_ADJUSTMENT, FLOOR_ADJUSTMENT,
     AGE_DEPRECIATION_RATE, ORIENTATION_ADJUSTMENT,
 )

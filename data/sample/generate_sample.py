@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import random
 import numpy as np
 from datetime import datetime, timedelta
-from utils.database import init_db, get_connection
+from core.database import init_db, get_connection
 
 random.seed(42)
 np.random.seed(42)
