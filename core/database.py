@@ -173,9 +173,16 @@ def ensure_data():
     init_db()
     with get_connection() as conn:
         ds_count = conn.execute("SELECT COUNT(*) FROM district_stats").fetchone()[0]
-        # 检查是否有残留的虚假小区数据需要清理
+        # 检查是否有残留的虚假数据需要清理
         fake_count = conn.execute("SELECT COUNT(*) FROM communities").fetchone()[0]
-    if ds_count == 0 or fake_count > 0:
+        fake_cases = conn.execute("SELECT COUNT(*) FROM deal_cases").fetchone()[0]
+    if ds_count == 0 or fake_count > 0 or fake_cases > 0:
+        # 清空所有表再重新生成
+        import os
+        db_path = get_db_path()
+        if os.path.exists(db_path):
+            os.remove(db_path)
+        init_db()
         from data.sample.generate_sample import generate_all
         generate_all()
 
