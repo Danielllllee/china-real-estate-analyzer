@@ -12,7 +12,7 @@ from core.database import query_df
 
 
 def get_area_rental_data(city: str, district: str) -> dict:
-    """获取区域租金数据（基于区域统计数据）"""
+    """获取区域租金数据（基于district_stats）"""
     stats = query_df("""
         SELECT avg_rent_per_sqm FROM district_stats
         WHERE city = ? AND district = ?

@@ -27,7 +27,7 @@ def init_db():
     """初始化数据库表结构"""
     with get_connection() as conn:
         conn.executescript("""
-        -- 区域统计（仅存储经过核实的真实数据）
+        -- 区域统计（经过核实的真实数据）
         CREATE TABLE IF NOT EXISTS district_stats (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             city TEXT NOT NULL,
@@ -42,35 +42,55 @@ def init_db():
             avg_deal_cycle INTEGER,
             UNIQUE(city, district, month)
         );
+
+        -- 城市宏观经济数据（来自统计局公报）
+        CREATE TABLE IF NOT EXISTS macro_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            city TEXT NOT NULL,
+            data_year TEXT NOT NULL,
+            gdp REAL,
+            population REAL,
+            per_capita_income REAL,
+            UNIQUE(city, data_year)
+        );
         """)
 
 
 def ensure_data():
-    """确保数据库已初始化且有真实数据"""
-    import os
+    """确保数据库已初始化且有最新真实数据"""
     db_path = get_db_path()
-    # 总是删除旧数据库重建，确保没有残留的虚假数据
     need_rebuild = False
     if not os.path.exists(db_path):
         need_rebuild = True
     else:
         try:
             with get_connection() as conn:
-                # 检查是否有旧表（虚假数据残留）
                 tables = [r[0] for r in conn.execute(
                     "SELECT name FROM sqlite_master WHERE type='table'"
                 ).fetchall()]
+                # 检查是否有旧表（虚假数据残留）
                 fake_tables = {'communities', 'listings', 'transactions',
                                'rentals', 'deal_cases', 'land_sales',
-                               'sectors', 'macro_data'}
+                               'sectors'}
                 if fake_tables & set(tables):
                     need_rebuild = True
-                # 检查是否有数据
-                ds_count = conn.execute(
-                    "SELECT COUNT(*) FROM district_stats"
-                ).fetchone()[0]
-                if ds_count == 0:
+                # 检查 macro_data 表是否存在（新增）
+                if 'macro_data' not in tables:
                     need_rebuild = True
+                # 检查 district_stats 是否有租金数据
+                if not need_rebuild:
+                    rent_count = conn.execute(
+                        "SELECT COUNT(*) FROM district_stats WHERE avg_rent_per_sqm IS NOT NULL"
+                    ).fetchone()[0]
+                    if rent_count == 0:
+                        need_rebuild = True
+                # 检查是否有数据
+                if not need_rebuild:
+                    ds_count = conn.execute(
+                        "SELECT COUNT(*) FROM district_stats"
+                    ).fetchone()[0]
+                    if ds_count == 0:
+                        need_rebuild = True
         except Exception:
             need_rebuild = True
 

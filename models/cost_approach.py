@@ -14,24 +14,8 @@ from core.database import query_df
 
 
 def get_land_cost(city: str, district: str, recent_years: int = 3) -> dict:
-    """获取区域近期土地楼面价"""
-    lands = query_df("""
-        SELECT floor_price, sale_date
-        FROM land_sales
-        WHERE city = ? AND district = ?
-        AND sale_date >= date('now', ?)
-        ORDER BY sale_date DESC
-    """, [city, district, f"-{recent_years} years"])
-
-    if lands.empty:
-        return None
-
-    return {
-        "avg_floor_price": lands["floor_price"].mean(),
-        "median_floor_price": lands["floor_price"].median(),
-        "latest_floor_price": lands.iloc[0]["floor_price"],
-        "sample_count": len(lands),
-    }
+    """获取区域近期土地楼面价（暂无真实数据）"""
+    return None
 
 
 def estimate_by_cost(
