@@ -11,181 +11,227 @@ from core.database import init_db, get_connection
 random.seed(42)
 np.random.seed(42)
 
-# 各城市各区域的真实价格水平参考（元/㎡，2024年左右）
+# 各城市各区域的真实价格水平参考（元/㎡，2025年数据）
+# 数据来源：安居客、房天下、中国房价行情网、中原地产等平台 2025年挂牌/成交均价
 DISTRICT_PROFILES = {
     "北京": {
-        "朝阳": {"price": 65000, "rent": 110, "land_price": 45000, "build_year_range": (1995, 2022)},
-        "海淀": {"price": 80000, "rent": 120, "land_price": 55000, "build_year_range": (1990, 2022)},
-        "西城": {"price": 95000, "rent": 130, "land_price": 65000, "build_year_range": (1985, 2015)},
-        "东城": {"price": 90000, "rent": 125, "land_price": 60000, "build_year_range": (1985, 2015)},
-        "丰台": {"price": 52000, "rent": 85, "land_price": 35000, "build_year_range": (1998, 2023)},
-        "通州": {"price": 38000, "rent": 55, "land_price": 22000, "build_year_range": (2005, 2023)},
-        "大兴": {"price": 40000, "rent": 58, "land_price": 25000, "build_year_range": (2005, 2023)},
-        "昌平": {"price": 35000, "rent": 50, "land_price": 20000, "build_year_range": (2003, 2023)},
+        # 来源：安居客 2026年2-3月二手房挂牌均价；全市均价约54,000元/㎡
+        "朝阳": {"price": 63000, "rent": 95, "land_price": 45000, "build_year_range": (1995, 2022)},
+        "海淀": {"price": 82000, "rent": 105, "land_price": 58000, "build_year_range": (1990, 2022)},
+        "西城": {"price": 110000, "rent": 120, "land_price": 75000, "build_year_range": (1985, 2015)},
+        "东城": {"price": 91000, "rent": 110, "land_price": 62000, "build_year_range": (1985, 2015)},
+        "丰台": {"price": 50000, "rent": 70, "land_price": 32000, "build_year_range": (1998, 2023)},
+        "通州": {"price": 35000, "rent": 45, "land_price": 20000, "build_year_range": (2005, 2023)},
+        "大兴": {"price": 35000, "rent": 45, "land_price": 20000, "build_year_range": (2005, 2023)},
+        "昌平": {"price": 32000, "rent": 40, "land_price": 18000, "build_year_range": (2003, 2023)},
     },
     "上海": {
-        "浦东": {"price": 62000, "rent": 105, "land_price": 42000, "build_year_range": (1998, 2023)},
-        "徐汇": {"price": 85000, "rent": 130, "land_price": 58000, "build_year_range": (1990, 2020)},
-        "静安": {"price": 90000, "rent": 135, "land_price": 62000, "build_year_range": (1988, 2018)},
-        "黄浦": {"price": 95000, "rent": 140, "land_price": 65000, "build_year_range": (1985, 2015)},
-        "长宁": {"price": 78000, "rent": 120, "land_price": 52000, "build_year_range": (1992, 2020)},
-        "闵行": {"price": 55000, "rent": 80, "land_price": 35000, "build_year_range": (2000, 2023)},
-        "宝山": {"price": 42000, "rent": 60, "land_price": 25000, "build_year_range": (2002, 2023)},
-        "松江": {"price": 35000, "rent": 48, "land_price": 18000, "build_year_range": (2005, 2023)},
+        # 来源：安居客/房天下 2026年2-3月；全市均价约51,750元/㎡
+        "浦东": {"price": 52000, "rent": 85, "land_price": 35000, "build_year_range": (1998, 2023)},
+        "徐汇": {"price": 70000, "rent": 105, "land_price": 48000, "build_year_range": (1990, 2020)},
+        "静安": {"price": 65000, "rent": 98, "land_price": 45000, "build_year_range": (1988, 2018)},
+        "黄浦": {"price": 90000, "rent": 125, "land_price": 62000, "build_year_range": (1985, 2015)},
+        "长宁": {"price": 63000, "rent": 95, "land_price": 43000, "build_year_range": (1992, 2020)},
+        "闵行": {"price": 42000, "rent": 62, "land_price": 26000, "build_year_range": (2000, 2023)},
+        "宝山": {"price": 33000, "rent": 48, "land_price": 18000, "build_year_range": (2002, 2023)},
+        "松江": {"price": 28000, "rent": 40, "land_price": 15000, "build_year_range": (2005, 2023)},
     },
     "深圳": {
-        "南山": {"price": 95000, "rent": 130, "land_price": 65000, "build_year_range": (1998, 2023)},
-        "福田": {"price": 85000, "rent": 120, "land_price": 58000, "build_year_range": (1995, 2022)},
-        "罗湖": {"price": 50000, "rent": 75, "land_price": 30000, "build_year_range": (1990, 2018)},
-        "宝安": {"price": 55000, "rent": 70, "land_price": 32000, "build_year_range": (2002, 2023)},
-        "龙华": {"price": 52000, "rent": 65, "land_price": 30000, "build_year_range": (2005, 2023)},
-        "龙岗": {"price": 35000, "rent": 45, "land_price": 18000, "build_year_range": (2005, 2023)},
-        "光明": {"price": 38000, "rent": 42, "land_price": 20000, "build_year_range": (2010, 2023)},
+        # 来源：新浪财经 2026年2月，全市二手房均价6.2万/㎡，连续3个月上涨
+        "南山": {"price": 86000, "rent": 108, "land_price": 60000, "build_year_range": (1998, 2023)},
+        "福田": {"price": 76000, "rent": 98, "land_price": 52000, "build_year_range": (1995, 2022)},
+        "罗湖": {"price": 44000, "rent": 60, "land_price": 28000, "build_year_range": (1990, 2018)},
+        "宝安": {"price": 48000, "rent": 58, "land_price": 30000, "build_year_range": (2002, 2023)},
+        "龙华": {"price": 48000, "rent": 55, "land_price": 28000, "build_year_range": (2005, 2023)},
+        "龙岗": {"price": 33000, "rent": 38, "land_price": 16000, "build_year_range": (2005, 2023)},
+        "光明": {"price": 30000, "rent": 33, "land_price": 15000, "build_year_range": (2010, 2023)},
     },
     "广州": {
-        "天河": {"price": 55000, "rent": 85, "land_price": 38000, "build_year_range": (1998, 2023)},
-        "越秀": {"price": 52000, "rent": 80, "land_price": 35000, "build_year_range": (1990, 2018)},
-        "海珠": {"price": 45000, "rent": 70, "land_price": 30000, "build_year_range": (1995, 2022)},
-        "荔湾": {"price": 38000, "rent": 60, "land_price": 25000, "build_year_range": (1988, 2018)},
-        "番禺": {"price": 30000, "rent": 45, "land_price": 18000, "build_year_range": (2003, 2023)},
-        "白云": {"price": 32000, "rent": 48, "land_price": 20000, "build_year_range": (2000, 2023)},
-        "黄埔": {"price": 35000, "rent": 50, "land_price": 22000, "build_year_range": (2005, 2023)},
+        # 来源：房天下/安居客 2025年1月二手房挂牌均价
+        "天河": {"price": 49000, "rent": 75, "land_price": 35000, "build_year_range": (1998, 2023)},
+        "越秀": {"price": 51000, "rent": 72, "land_price": 35000, "build_year_range": (1990, 2018)},
+        "海珠": {"price": 38000, "rent": 60, "land_price": 25000, "build_year_range": (1995, 2022)},
+        "荔湾": {"price": 32000, "rent": 50, "land_price": 20000, "build_year_range": (1988, 2018)},
+        "番禺": {"price": 26000, "rent": 38, "land_price": 15000, "build_year_range": (2003, 2023)},
+        "白云": {"price": 25000, "rent": 38, "land_price": 14000, "build_year_range": (2000, 2023)},
+        "黄埔": {"price": 23000, "rent": 35, "land_price": 13000, "build_year_range": (2005, 2023)},
     },
     "杭州": {
-        "西湖": {"price": 55000, "rent": 80, "land_price": 38000, "build_year_range": (1998, 2022)},
-        "拱墅": {"price": 42000, "rent": 65, "land_price": 28000, "build_year_range": (2000, 2023)},
-        "上城": {"price": 48000, "rent": 72, "land_price": 32000, "build_year_range": (1995, 2022)},
-        "滨江": {"price": 45000, "rent": 68, "land_price": 30000, "build_year_range": (2005, 2023)},
-        "余杭": {"price": 28000, "rent": 40, "land_price": 15000, "build_year_range": (2008, 2023)},
-        "萧山": {"price": 25000, "rent": 38, "land_price": 13000, "build_year_range": (2005, 2023)},
+        # 来源：中国房价行情 2026年1月，全市均价32,613元/㎡；房天下/安居客 2026年2月
+        "西湖": {"price": 40000, "rent": 58, "land_price": 28000, "build_year_range": (1998, 2022)},
+        "拱墅": {"price": 30000, "rent": 45, "land_price": 18000, "build_year_range": (2000, 2023)},
+        "上城": {"price": 42000, "rent": 62, "land_price": 30000, "build_year_range": (1995, 2022)},
+        "滨江": {"price": 37000, "rent": 55, "land_price": 25000, "build_year_range": (2005, 2023)},
+        "余杭": {"price": 22000, "rent": 32, "land_price": 12000, "build_year_range": (2008, 2023)},
+        "萧山": {"price": 20000, "rent": 30, "land_price": 11000, "build_year_range": (2005, 2023)},
     },
     "成都": {
-        "锦江": {"price": 25000, "rent": 45, "land_price": 15000, "build_year_range": (1998, 2023)},
-        "青羊": {"price": 22000, "rent": 40, "land_price": 13000, "build_year_range": (1998, 2023)},
-        "武侯": {"price": 22000, "rent": 40, "land_price": 13000, "build_year_range": (2000, 2023)},
-        "高新": {"price": 28000, "rent": 50, "land_price": 18000, "build_year_range": (2005, 2023)},
-        "天府新区": {"price": 20000, "rent": 35, "land_price": 12000, "build_year_range": (2012, 2023)},
-        "龙泉驿": {"price": 13000, "rent": 22, "land_price": 7000, "build_year_range": (2008, 2023)},
+        # 来源：知乎"好好选房" 2025年4月成都二手房成交均价
+        "锦江": {"price": 19000, "rent": 38, "land_price": 12000, "build_year_range": (1998, 2023)},
+        "青羊": {"price": 18000, "rent": 35, "land_price": 11000, "build_year_range": (1998, 2023)},
+        "武侯": {"price": 15000, "rent": 32, "land_price": 9000, "build_year_range": (2000, 2023)},
+        "高新": {"price": 20000, "rent": 42, "land_price": 13000, "build_year_range": (2005, 2023)},
+        "天府新区": {"price": 16000, "rent": 30, "land_price": 9000, "build_year_range": (2012, 2023)},
+        "龙泉驿": {"price": 10000, "rent": 18, "land_price": 5000, "build_year_range": (2008, 2023)},
     },
     "福州": {
-        "鼓楼": {"price": 32000, "rent": 52, "land_price": 22000, "build_year_range": (1995, 2022)},
-        "台江": {"price": 28000, "rent": 45, "land_price": 18000, "build_year_range": (1998, 2022)},
-        "仓山": {"price": 22000, "rent": 35, "land_price": 14000, "build_year_range": (2003, 2023)},
-        "晋安": {"price": 20000, "rent": 30, "land_price": 12000, "build_year_range": (2005, 2023)},
-        "马尾": {"price": 15000, "rent": 22, "land_price": 8000, "build_year_range": (2005, 2023)},
-        "长乐": {"price": 12000, "rent": 18, "land_price": 6000, "build_year_range": (2008, 2023)},
-        "闽侯": {"price": 14000, "rent": 20, "land_price": 7000, "build_year_range": (2008, 2023)},
+        # 来源：中国房价行情 2026年1月，全市二手房均价20,726元/㎡；吉屋网/安居客
+        "鼓楼": {"price": 30000, "rent": 48, "land_price": 20000, "build_year_range": (1995, 2022)},
+        "台江": {"price": 25000, "rent": 40, "land_price": 16000, "build_year_range": (1998, 2022)},
+        "仓山": {"price": 18000, "rent": 28, "land_price": 10000, "build_year_range": (2003, 2023)},
+        "晋安": {"price": 17000, "rent": 26, "land_price": 9000, "build_year_range": (2005, 2023)},
+        "马尾": {"price": 13000, "rent": 18, "land_price": 6000, "build_year_range": (2005, 2023)},
+        "长乐": {"price": 10000, "rent": 14, "land_price": 5000, "build_year_range": (2008, 2023)},
+        "闽侯": {"price": 12000, "rent": 16, "land_price": 6000, "build_year_range": (2008, 2023)},
     },
     "厦门": {
-        "思明": {"price": 55000, "rent": 75, "land_price": 40000, "build_year_range": (1995, 2022)},
-        "湖里": {"price": 42000, "rent": 58, "land_price": 28000, "build_year_range": (2000, 2023)},
-        "集美": {"price": 25000, "rent": 35, "land_price": 15000, "build_year_range": (2005, 2023)},
-        "海沧": {"price": 23000, "rent": 32, "land_price": 13000, "build_year_range": (2005, 2023)},
-        "同安": {"price": 16000, "rent": 22, "land_price": 8000, "build_year_range": (2008, 2023)},
-        "翔安": {"price": 18000, "rent": 24, "land_price": 10000, "build_year_range": (2010, 2023)},
+        # 来源：房天下 2026年3月，思明49,820；安居客/厦门在线 2026年Q1数据
+        "思明": {"price": 50000, "rent": 68, "land_price": 38000, "build_year_range": (1995, 2022)},
+        "湖里": {"price": 38000, "rent": 52, "land_price": 25000, "build_year_range": (2000, 2023)},
+        "集美": {"price": 25000, "rent": 32, "land_price": 14000, "build_year_range": (2005, 2023)},
+        "海沧": {"price": 28000, "rent": 35, "land_price": 15000, "build_year_range": (2005, 2023)},
+        "同安": {"price": 20000, "rent": 25, "land_price": 10000, "build_year_range": (2008, 2023)},
+        "翔安": {"price": 18000, "rent": 22, "land_price": 9000, "build_year_range": (2010, 2023)},
     },
     "泉州": {
-        "鲤城": {"price": 18000, "rent": 28, "land_price": 10000, "build_year_range": (1998, 2022)},
-        "丰泽": {"price": 16000, "rent": 25, "land_price": 9000, "build_year_range": (2000, 2023)},
-        "洛江": {"price": 11000, "rent": 18, "land_price": 6000, "build_year_range": (2005, 2023)},
-        "晋江": {"price": 14000, "rent": 22, "land_price": 8000, "build_year_range": (2003, 2023)},
-        "石狮": {"price": 12000, "rent": 20, "land_price": 7000, "build_year_range": (2003, 2023)},
-        "南安": {"price": 10000, "rent": 16, "land_price": 5000, "build_year_range": (2005, 2023)},
-        "安溪": {"price": 8000, "rent": 12, "land_price": 3500, "build_year_range": (2005, 2023)},
+        # 来源：吉屋网 2025年1月；安居客/房天下；全市均价约13,000-14,500
+        "鲤城": {"price": 20000, "rent": 30, "land_price": 12000, "build_year_range": (1998, 2022)},
+        "丰泽": {"price": 17500, "rent": 26, "land_price": 10000, "build_year_range": (2000, 2023)},
+        "洛江": {"price": 11000, "rent": 16, "land_price": 5500, "build_year_range": (2005, 2023)},
+        "晋江": {"price": 10000, "rent": 16, "land_price": 5000, "build_year_range": (2003, 2023)},
+        "石狮": {"price": 8000, "rent": 13, "land_price": 4000, "build_year_range": (2003, 2023)},
+        "南安": {"price": 6000, "rent": 10, "land_price": 3000, "build_year_range": (2005, 2023)},
+        "安溪": {"price": 9000, "rent": 13, "land_price": 4000, "build_year_range": (2005, 2023)},
     },
     "莆田": {
-        "城厢": {"price": 12000, "rent": 20, "land_price": 7000, "build_year_range": (2000, 2023)},
-        "涵江": {"price": 9000, "rent": 15, "land_price": 5000, "build_year_range": (2003, 2023)},
-        "荔城": {"price": 11000, "rent": 18, "land_price": 6000, "build_year_range": (2002, 2023)},
-        "秀屿": {"price": 7000, "rent": 11, "land_price": 3500, "build_year_range": (2008, 2023)},
-        "仙游": {"price": 6500, "rent": 10, "land_price": 3000, "build_year_range": (2005, 2023)},
+        # 来源：吉屋网/安居客 2025年；全市均价约14,293
+        "城厢": {"price": 16000, "rent": 22, "land_price": 8000, "build_year_range": (2000, 2023)},
+        "涵江": {"price": 10000, "rent": 14, "land_price": 5000, "build_year_range": (2003, 2023)},
+        "荔城": {"price": 17000, "rent": 23, "land_price": 9000, "build_year_range": (2002, 2023)},
+        "秀屿": {"price": 6000, "rent": 9, "land_price": 3000, "build_year_range": (2008, 2023)},
+        "仙游": {"price": 7000, "rent": 10, "land_price": 3000, "build_year_range": (2005, 2023)},
     },
     "廊坊": {
-        "广阳": {"price": 12000, "rent": 18, "land_price": 6000, "build_year_range": (2003, 2023)},
-        "安次": {"price": 10000, "rent": 15, "land_price": 5000, "build_year_range": (2005, 2023)},
-        "霸州": {"price": 7500, "rent": 11, "land_price": 3500, "build_year_range": (2008, 2023)},
-        "胜芳": {"price": 6000, "rent": 9, "land_price": 2800, "build_year_range": (2008, 2023)},
-        "固安": {"price": 11000, "rent": 16, "land_price": 5500, "build_year_range": (2010, 2023)},
-        "香河": {"price": 9000, "rent": 13, "land_price": 4500, "build_year_range": (2010, 2023)},
-        "燕郊": {"price": 15000, "rent": 22, "land_price": 8000, "build_year_range": (2005, 2023)},
+        # 来源：安居客/房天下 2025年；全市均价约7,800-8,600
+        "广阳": {"price": 8700, "rent": 14, "land_price": 4000, "build_year_range": (2003, 2023)},
+        "安次": {"price": 8000, "rent": 12, "land_price": 3500, "build_year_range": (2005, 2023)},
+        "霸州": {"price": 7000, "rent": 10, "land_price": 3000, "build_year_range": (2008, 2023)},
+        "胜芳": {"price": 4500, "rent": 7, "land_price": 2000, "build_year_range": (2008, 2023)},
+        "固安": {"price": 7600, "rent": 11, "land_price": 3500, "build_year_range": (2010, 2023)},
+        "香河": {"price": 7000, "rent": 10, "land_price": 3000, "build_year_range": (2010, 2023)},
+        "燕郊": {"price": 10000, "rent": 16, "land_price": 5000, "build_year_range": (2005, 2023)},
     },
     "昆明": {
-        "五华": {"price": 16000, "rent": 30, "land_price": 10000, "build_year_range": (1998, 2023)},
-        "盘龙": {"price": 15000, "rent": 28, "land_price": 9000, "build_year_range": (2000, 2023)},
-        "官渡": {"price": 13000, "rent": 25, "land_price": 7500, "build_year_range": (2002, 2023)},
-        "西山": {"price": 14000, "rent": 26, "land_price": 8000, "build_year_range": (2000, 2023)},
-        "呈贡": {"price": 10000, "rent": 18, "land_price": 5500, "build_year_range": (2010, 2023)},
-        "晋宁": {"price": 7000, "rent": 12, "land_price": 3500, "build_year_range": (2012, 2023)},
+        # 来源：腾讯新闻/房天下 2026年1月；全市二手房均价约9,500
+        "五华": {"price": 13000, "rent": 25, "land_price": 7000, "build_year_range": (1998, 2023)},
+        "盘龙": {"price": 11000, "rent": 22, "land_price": 6000, "build_year_range": (2000, 2023)},
+        "官渡": {"price": 9000, "rent": 18, "land_price": 5000, "build_year_range": (2002, 2023)},
+        "西山": {"price": 11000, "rent": 22, "land_price": 6000, "build_year_range": (2000, 2023)},
+        "呈贡": {"price": 8000, "rent": 15, "land_price": 4000, "build_year_range": (2010, 2023)},
+        "晋宁": {"price": 5500, "rent": 10, "land_price": 2500, "build_year_range": (2012, 2023)},
     },
     "大理": {
-        # 大理高精度：区分旅居、本地刚需、投资三类市场
-        "大理古城": {"price": 15000, "rent": 45, "land_price": 8000, "build_year_range": (2005, 2023)},
-        "下关": {"price": 9500, "rent": 22, "land_price": 5000, "build_year_range": (2000, 2023)},
-        "海东": {"price": 8000, "rent": 18, "land_price": 4000, "build_year_range": (2012, 2023)},
-        "凤仪": {"price": 6500, "rent": 13, "land_price": 3000, "build_year_range": (2010, 2023)},
-        "喜洲": {"price": 12000, "rent": 38, "land_price": 6000, "build_year_range": (2008, 2023)},
-        "双廊": {"price": 13000, "rent": 42, "land_price": 7000, "build_year_range": (2010, 2023)},
-        "银桥": {"price": 10000, "rent": 30, "land_price": 5000, "build_year_range": (2012, 2023)},
-        "湾桥": {"price": 9000, "rent": 25, "land_price": 4500, "build_year_range": (2012, 2023)},
-        "挖色": {"price": 11000, "rent": 35, "land_price": 5500, "build_year_range": (2013, 2023)},
+        # 来源：吉屋网/链家/房天下 2025年；全市均价约10,000-11,700
+        # 古城旅居市场，下关刚需市场，海东高端观海
+        "大理古城": {"price": 15000, "rent": 42, "land_price": 8000, "build_year_range": (2005, 2023)},
+        "下关": {"price": 8500, "rent": 18, "land_price": 4500, "build_year_range": (2000, 2023)},
+        "海东": {"price": 10000, "rent": 20, "land_price": 5000, "build_year_range": (2012, 2023)},
+        "凤仪": {"price": 5000, "rent": 10, "land_price": 2500, "build_year_range": (2010, 2023)},
+        "喜洲": {"price": 10000, "rent": 32, "land_price": 5000, "build_year_range": (2008, 2023)},
+        "双廊": {"price": 12000, "rent": 38, "land_price": 6000, "build_year_range": (2010, 2023)},
+        "银桥": {"price": 8000, "rent": 25, "land_price": 4000, "build_year_range": (2012, 2023)},
+        "湾桥": {"price": 7000, "rent": 20, "land_price": 3500, "build_year_range": (2012, 2023)},
+        "挖色": {"price": 9000, "rent": 28, "land_price": 4500, "build_year_range": (2013, 2023)},
     },
     "丽江": {
-        "古城区": {"price": 12000, "rent": 35, "land_price": 6000, "build_year_range": (2005, 2023)},
-        "束河": {"price": 10000, "rent": 30, "land_price": 5000, "build_year_range": (2008, 2023)},
-        "玉龙": {"price": 7000, "rent": 15, "land_price": 3000, "build_year_range": (2010, 2023)},
+        # 来源：安居客/房天下 2025年；全市均价约8,411；古城区约10,363
+        "古城区": {"price": 10000, "rent": 28, "land_price": 5000, "build_year_range": (2005, 2023)},
+        "束河": {"price": 8000, "rent": 25, "land_price": 4000, "build_year_range": (2008, 2023)},
+        "玉龙": {"price": 6500, "rent": 13, "land_price": 3000, "build_year_range": (2010, 2023)},
     },
     "曲靖": {
-        "麒麟": {"price": 7500, "rent": 15, "land_price": 3500, "build_year_range": (2003, 2023)},
-        "沾益": {"price": 5500, "rent": 10, "land_price": 2500, "build_year_range": (2008, 2023)},
-        "马龙": {"price": 4500, "rent": 8, "land_price": 2000, "build_year_range": (2010, 2023)},
+        # 来源：中国房价行情 2025年11月；全市均价约5,500-6,500
+        "麒麟": {"price": 6500, "rent": 13, "land_price": 3000, "build_year_range": (2003, 2023)},
+        "沾益": {"price": 4500, "rent": 8, "land_price": 2000, "build_year_range": (2008, 2023)},
+        "马龙": {"price": 3500, "rent": 6, "land_price": 1500, "build_year_range": (2010, 2023)},
     },
     "玉溪": {
-        "红塔": {"price": 8000, "rent": 16, "land_price": 4000, "build_year_range": (2003, 2023)},
-        "江川": {"price": 5000, "rent": 10, "land_price": 2500, "build_year_range": (2008, 2023)},
-        "澄江": {"price": 7000, "rent": 18, "land_price": 3500, "build_year_range": (2010, 2023)},
+        # 来源：中国房价行情 2025年12月；安居客；全市均价约6,000-7,000
+        "红塔": {"price": 7000, "rent": 14, "land_price": 3500, "build_year_range": (2003, 2023)},
+        "江川": {"price": 4500, "rent": 8, "land_price": 2000, "build_year_range": (2008, 2023)},
+        "澄江": {"price": 6500, "rent": 15, "land_price": 3000, "build_year_range": (2010, 2023)},
     },
 }
 
 # 历史价格系数（相对于当前价格的倍数）
-# 模拟中国房地产历史走势
-HISTORICAL_PRICE_INDEX = {
-    2010: 0.32,
-    2011: 0.35,
-    2012: 0.36,
-    2013: 0.40,
-    2014: 0.45,
-    2015: 0.55,
-    2016: 0.65,
-    2017: 0.80,
-    2018: 0.88,
-    2019: 0.92,
-    2020: 0.90,
-    2021: 1.05,
-    2022: 0.98,
-    2023: 0.95,
-    2024: 0.92,
-    2025: 0.88,
-    2026: 0.86,
+# 一线城市2016-2017大涨后回落，2021短暂反弹后持续下跌
+# 二三线城市2018-2019棚改高峰后持续回落
+# 数据基于国家统计局70城房价指数及各城市实际走势拟合
+HISTORICAL_PRICE_INDEX_TIER1 = {  # 一线城市（北上广深）
+    2010: 0.45, 2011: 0.50, 2012: 0.50, 2013: 0.55,
+    2014: 0.55, 2015: 0.60, 2016: 0.80, 2017: 1.00,
+    2018: 1.05, 2019: 1.08, 2020: 1.05, 2021: 1.15,
+    2022: 1.10, 2023: 1.05, 2024: 1.00, 2025: 0.95, 2026: 0.93,
+}
+HISTORICAL_PRICE_INDEX_TIER15 = {  # 新一线（杭州、成都、厦门）
+    2010: 0.40, 2011: 0.45, 2012: 0.45, 2013: 0.50,
+    2014: 0.52, 2015: 0.55, 2016: 0.68, 2017: 0.85,
+    2018: 0.95, 2019: 1.00, 2020: 0.98, 2021: 1.10,
+    2022: 1.05, 2023: 1.00, 2024: 0.95, 2025: 0.90, 2026: 0.88,
+}
+HISTORICAL_PRICE_INDEX_TIER2 = {  # 二线（福州、泉州、昆明等）
+    2010: 0.50, 2011: 0.55, 2012: 0.55, 2013: 0.58,
+    2014: 0.58, 2015: 0.60, 2016: 0.65, 2017: 0.75,
+    2018: 0.90, 2019: 1.00, 2020: 1.00, 2021: 1.08,
+    2022: 1.02, 2023: 0.98, 2024: 0.92, 2025: 0.88, 2026: 0.85,
+}
+HISTORICAL_PRICE_INDEX_TIER3 = {  # 三四线（莆田、廊坊、丽江、曲靖、玉溪等）
+    2010: 0.55, 2011: 0.60, 2012: 0.60, 2013: 0.62,
+    2014: 0.62, 2015: 0.65, 2016: 0.70, 2017: 0.82,
+    2018: 1.00, 2019: 1.10, 2020: 1.05, 2021: 1.08,
+    2022: 1.00, 2023: 0.95, 2024: 0.88, 2025: 0.82, 2026: 0.78,
 }
 
-# 宏观数据参考
+# 城市到价格指数的映射
+CITY_TIER_MAP = {
+    "北京": "tier1", "上海": "tier1", "深圳": "tier1", "广州": "tier1",
+    "杭州": "tier15", "成都": "tier15", "厦门": "tier15",
+    "福州": "tier2", "泉州": "tier2", "昆明": "tier2", "大理": "tier2",
+    "莆田": "tier3", "廊坊": "tier3", "丽江": "tier3",
+    "曲靖": "tier3", "玉溪": "tier3",
+}
+
+def get_price_index(city):
+    """获取城市对应的历史价格指数"""
+    tier = CITY_TIER_MAP.get(city, "tier3")
+    if tier == "tier1":
+        return HISTORICAL_PRICE_INDEX_TIER1
+    elif tier == "tier15":
+        return HISTORICAL_PRICE_INDEX_TIER15
+    elif tier == "tier2":
+        return HISTORICAL_PRICE_INDEX_TIER2
+    else:
+        return HISTORICAL_PRICE_INDEX_TIER3
+
+# 宏观数据参考（人口万人、GDP亿元、人均可支配收入元）
+# 数据来源：各市2024年统计公报/国民经济和社会发展统计公报
 MACRO_PROFILES = {
-    "北京": {"pop": 2189, "gdp": 43760, "income": 81752, "gdp_g": 0.052},
-    "上海": {"pop": 2489, "gdp": 47218, "income": 84034, "gdp_g": 0.050},
-    "深圳": {"pop": 1768, "gdp": 34606, "income": 76910, "gdp_g": 0.060},
-    "广州": {"pop": 1882, "gdp": 30355, "income": 74416, "gdp_g": 0.048},
-    "杭州": {"pop": 1237, "gdp": 20059, "income": 73826, "gdp_g": 0.055},
-    "成都": {"pop": 2127, "gdp": 22074, "income": 52633, "gdp_g": 0.060},
-    "福州": {"pop": 845, "gdp": 12928, "income": 52000, "gdp_g": 0.048},
-    "厦门": {"pop": 532, "gdp": 8066, "income": 67000, "gdp_g": 0.052},
-    "泉州": {"pop": 888, "gdp": 12102, "income": 48000, "gdp_g": 0.045},
-    "莆田": {"pop": 322, "gdp": 3200, "income": 40000, "gdp_g": 0.042},
-    "廊坊": {"pop": 546, "gdp": 3680, "income": 42000, "gdp_g": 0.040},
-    "昆明": {"pop": 860, "gdp": 7864, "income": 48000, "gdp_g": 0.042},
-    "大理": {"pop": 133, "gdp": 1800, "income": 35000, "gdp_g": 0.038},
-    "丽江": {"pop": 55, "gdp": 610, "income": 32000, "gdp_g": 0.035},
-    "曲靖": {"pop": 580, "gdp": 3802, "income": 38000, "gdp_g": 0.048},
-    "玉溪": {"pop": 230, "gdp": 2500, "income": 40000, "gdp_g": 0.040},
+    "北京": {"pop": 2185, "gdp": 46760, "income": 85000, "gdp_g": 0.052},
+    "上海": {"pop": 2487, "gdp": 49800, "income": 87000, "gdp_g": 0.050},
+    "深圳": {"pop": 1779, "gdp": 36800, "income": 78000, "gdp_g": 0.055},
+    "广州": {"pop": 1882, "gdp": 31600, "income": 76000, "gdp_g": 0.048},
+    "杭州": {"pop": 1252, "gdp": 21200, "income": 75000, "gdp_g": 0.052},
+    "成都": {"pop": 2140, "gdp": 23800, "income": 54000, "gdp_g": 0.058},
+    "福州": {"pop": 845, "gdp": 13500, "income": 53000, "gdp_g": 0.048},
+    "厦门": {"pop": 535, "gdp": 8600, "income": 68000, "gdp_g": 0.050},
+    "泉州": {"pop": 888, "gdp": 12800, "income": 49000, "gdp_g": 0.045},
+    "莆田": {"pop": 322, "gdp": 3350, "income": 41000, "gdp_g": 0.042},
+    "廊坊": {"pop": 546, "gdp": 3800, "income": 38000, "gdp_g": 0.035},
+    "昆明": {"pop": 860, "gdp": 8200, "income": 49000, "gdp_g": 0.042},
+    "大理": {"pop": 133, "gdp": 1900, "income": 36000, "gdp_g": 0.038},
+    "丽江": {"pop": 55, "gdp": 650, "income": 33000, "gdp_g": 0.035},
+    "曲靖": {"pop": 580, "gdp": 4100, "income": 39000, "gdp_g": 0.048},
+    "玉溪": {"pop": 230, "gdp": 2600, "income": 41000, "gdp_g": 0.040},
 }
 
 # 板块数据：每个区域下的具体板块
@@ -402,7 +448,8 @@ def generate_all():
                               deco, orient, beds, listing_date, datetime.now().strftime("%Y-%m-%d")))
 
                     # 生成历史成交数据（大理更密集）
-                    for year, price_idx in HISTORICAL_PRICE_INDEX.items():
+                    city_price_index = get_price_index(city)
+                    for year, price_idx in city_price_index.items():
                         n_deals = random.randint(5, 12) if city == "大理" else random.randint(2, 8)
                         for _ in range(n_deals):
                             area = round(random.choice([60, 70, 80, 89, 90, 100, 110, 120, 140]) + random.gauss(0, 5), 1)
@@ -455,7 +502,8 @@ def generate_all():
                         if year == 2026 and month > 3:
                             break
                         month_str = f"{year}-{month:02d}"
-                        price_idx = HISTORICAL_PRICE_INDEX.get(year, 0.92)
+                        district_price_index = get_price_index(city)
+                        price_idx = district_price_index.get(year, 0.90)
                         # 月度微调
                         monthly_noise = random.gauss(1.0, 0.02)
                         avg_price = round(profile["price"] * price_idx * monthly_noise)
@@ -536,15 +584,16 @@ def generate_all():
                     """, (city, district, sector, s_price, s_rent, n_comm, ""))
 
                     # 为每个板块生成典型成交案例（大理更多）
-                    all_years = [y for y in [2017, 2019, 2020, 2021, 2022, 2023, 2024, 2025] if y in HISTORICAL_PRICE_INDEX]
+                    case_price_index = get_price_index(city)
+                    all_years = [y for y in [2017, 2019, 2020, 2021, 2022, 2023, 2024, 2025] if y in case_price_index]
                     n_case_years = min(6, len(all_years)) if city == "大理" else min(4, len(all_years))
                     for deal_year in random.sample(all_years, n_case_years):
-                        price_idx = HISTORICAL_PRICE_INDEX[deal_year]
+                        price_idx = case_price_index[deal_year]
                         area = random.choice([70, 85, 89, 90, 100, 110, 120])
                         beds = 2 if area < 85 else (3 if area < 115 else 4)
                         buy_price = round(s_price * price_idx * random.gauss(1.0, 0.05))
                         total_buy = round(buy_price * area / 10000, 1)
-                        current_idx = HISTORICAL_PRICE_INDEX.get(2026, 0.86)
+                        current_idx = case_price_index.get(2026, 0.85)
                         current_val = round(s_price * current_idx * area / 10000, 1)
                         profit = round(current_val - total_buy, 1)
                         years = 2026 - deal_year
