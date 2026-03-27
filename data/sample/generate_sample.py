@@ -92,6 +92,41 @@ DISTRICT_PROFILES = {
         "石狮": {"price": 12000, "rent": 20, "land_price": 7000, "build_year_range": (2003, 2023)},
         "南安": {"price": 10000, "rent": 16, "land_price": 5000, "build_year_range": (2005, 2023)},
     },
+    "昆明": {
+        "五华": {"price": 16000, "rent": 30, "land_price": 10000, "build_year_range": (1998, 2023)},
+        "盘龙": {"price": 15000, "rent": 28, "land_price": 9000, "build_year_range": (2000, 2023)},
+        "官渡": {"price": 13000, "rent": 25, "land_price": 7500, "build_year_range": (2002, 2023)},
+        "西山": {"price": 14000, "rent": 26, "land_price": 8000, "build_year_range": (2000, 2023)},
+        "呈贡": {"price": 10000, "rent": 18, "land_price": 5500, "build_year_range": (2010, 2023)},
+        "晋宁": {"price": 7000, "rent": 12, "land_price": 3500, "build_year_range": (2012, 2023)},
+    },
+    "大理": {
+        # 大理高精度：区分旅居、本地刚需、投资三类市场
+        "大理古城": {"price": 15000, "rent": 45, "land_price": 8000, "build_year_range": (2005, 2023)},
+        "下关": {"price": 9500, "rent": 22, "land_price": 5000, "build_year_range": (2000, 2023)},
+        "海东": {"price": 8000, "rent": 18, "land_price": 4000, "build_year_range": (2012, 2023)},
+        "凤仪": {"price": 6500, "rent": 13, "land_price": 3000, "build_year_range": (2010, 2023)},
+        "喜洲": {"price": 12000, "rent": 38, "land_price": 6000, "build_year_range": (2008, 2023)},
+        "双廊": {"price": 13000, "rent": 42, "land_price": 7000, "build_year_range": (2010, 2023)},
+        "银桥": {"price": 10000, "rent": 30, "land_price": 5000, "build_year_range": (2012, 2023)},
+        "湾桥": {"price": 9000, "rent": 25, "land_price": 4500, "build_year_range": (2012, 2023)},
+        "挖色": {"price": 11000, "rent": 35, "land_price": 5500, "build_year_range": (2013, 2023)},
+    },
+    "丽江": {
+        "古城区": {"price": 12000, "rent": 35, "land_price": 6000, "build_year_range": (2005, 2023)},
+        "束河": {"price": 10000, "rent": 30, "land_price": 5000, "build_year_range": (2008, 2023)},
+        "玉龙": {"price": 7000, "rent": 15, "land_price": 3000, "build_year_range": (2010, 2023)},
+    },
+    "曲靖": {
+        "麒麟": {"price": 7500, "rent": 15, "land_price": 3500, "build_year_range": (2003, 2023)},
+        "沾益": {"price": 5500, "rent": 10, "land_price": 2500, "build_year_range": (2008, 2023)},
+        "马龙": {"price": 4500, "rent": 8, "land_price": 2000, "build_year_range": (2010, 2023)},
+    },
+    "玉溪": {
+        "红塔": {"price": 8000, "rent": 16, "land_price": 4000, "build_year_range": (2003, 2023)},
+        "江川": {"price": 5000, "rent": 10, "land_price": 2500, "build_year_range": (2008, 2023)},
+        "澄江": {"price": 7000, "rent": 18, "land_price": 3500, "build_year_range": (2010, 2023)},
+    },
 }
 
 # 历史价格系数（相对于当前价格的倍数）
@@ -121,6 +156,11 @@ MACRO_PROFILES = {
     "福州": {"pop": 845, "gdp": 12928, "income": 52000, "gdp_g": 0.048},
     "厦门": {"pop": 532, "gdp": 8066, "income": 67000, "gdp_g": 0.052},
     "泉州": {"pop": 888, "gdp": 12102, "income": 48000, "gdp_g": 0.045},
+    "昆明": {"pop": 860, "gdp": 7864, "income": 48000, "gdp_g": 0.042},
+    "大理": {"pop": 133, "gdp": 1800, "income": 35000, "gdp_g": 0.038},
+    "丽江": {"pop": 55, "gdp": 610, "income": 32000, "gdp_g": 0.035},
+    "曲靖": {"pop": 580, "gdp": 3802, "income": 38000, "gdp_g": 0.048},
+    "玉溪": {"pop": 230, "gdp": 2500, "income": 40000, "gdp_g": 0.040},
 }
 
 # 板块数据：每个区域下的具体板块
@@ -204,7 +244,54 @@ DISTRICT_SECTORS = {
         "石狮": {"石狮城区", "宝盖", "蚶江"},
         "南安": ["水头", "溪美", "官桥"],
     },
+    "昆明": {
+        "五华": ["翠湖", "北市区", "西站", "龙泉路", "学府路"],
+        "盘龙": ["白塔路", "北京路", "东风广场", "世博片区", "金殿"],
+        "官渡": ["世纪城", "新螺蛳湾", "官渡古镇", "巫家坝"],
+        "西山": ["滇池路", "前卫", "马街", "碧鸡"],
+        "呈贡": ["大学城", "乌龙", "洛龙", "雨花"],
+        "晋宁": ["昆阳", "晋城", "古城"],
+    },
+    "大理": {
+        # 大理高精度：每个区域细分到具体位置
+        "大理古城": ["人民路", "洋人街", "玉洱路", "苍山门", "南门", "三月街",
+                     "才村", "龙龛", "大理大学周边"],
+        "下关": ["泰安路", "建设路", "苍山路", "龙溪路", "满江", "大关邑",
+                 "金星", "荷花", "下关北", "经开区"],
+        "海东": ["海东新城", "天镜阁", "金梭岛周边", "海东山地", "向阳"],
+        "凤仪": ["凤仪镇中心", "华营", "凤鸣路"],
+        "喜洲": ["喜洲古镇", "桃源", "周城", "蝴蝶泉"],
+        "双廊": ["双廊古镇", "玉几岛", "南诏风情岛", "大建旁"],
+        "银桥": ["银桥镇中心", "磻溪", "阳波"],
+        "湾桥": ["湾桥镇中心", "上阳溪", "甸中"],
+        "挖色": ["挖色镇中心", "小普陀", "康廊"],
+    },
+    "丽江": {
+        "古城区": ["大研古城", "束河路", "祥和", "福慧路", "金甲"],
+        "束河": ["束河古镇", "白沙", "龙泉"],
+        "玉龙": ["黄山镇", "拉市海", "白沙镇"],
+    },
+    "曲靖": {
+        "麒麟": ["南宁路", "麒麟花园", "珠江源", "翠峰"],
+        "沾益": ["沾益城区", "花山", "白水"],
+        "马龙": ["马龙城区", "通泉"],
+    },
+    "玉溪": {
+        "红塔": ["聂耳路", "东风路", "高仓", "玉兴路"],
+        "江川": ["大街", "星云湖畔", "前卫"],
+        "澄江": ["澄江城区", "抚仙湖畔", "右所"],
+    },
 }
+
+# 大理特殊：增加更多本地化小区名
+DALI_COMMUNITY_NAMES = [
+    "苍洱", "洱海", "苍山", "大理", "风花", "雪月", "蝴蝶", "三塔",
+    "白族", "南诏", "崇圣", "洱源", "银苍", "玉带", "感通", "天龙",
+]
+DALI_SUFFIX = [
+    "小院", "庭院", "别院", "雅居", "民宿", "花园", "山庄", "院子",
+    "半岛", "海景房", "观海居", "云居", "栖居", "云舍", "静庐", "雅苑",
+]
 
 
 COMMUNITY_NAME_PARTS = [
@@ -215,7 +302,9 @@ COMMUNITY_NAME_PARTS = [
 ]
 
 
-def random_community_name():
+def random_community_name(city=None):
+    if city == "大理":
+        return random.choice(DALI_COMMUNITY_NAMES) + random.choice(DALI_SUFFIX)
     return random.choice(COMMUNITY_NAME_PARTS[0]) + random.choice(COMMUNITY_NAME_PARTS[1])
 
 
@@ -225,11 +314,14 @@ def generate_all():
         community_id = 0
         for city, districts in DISTRICT_PROFILES.items():
             for district, profile in districts.items():
-                # 每个区域生成10-20个小区
-                n_communities = random.randint(10, 20)
+                # 大理高精度：每区域生成更多小区
+                if city == "大理":
+                    n_communities = random.randint(20, 35)
+                else:
+                    n_communities = random.randint(10, 20)
                 for _ in range(n_communities):
                     community_id += 1
-                    name = random_community_name() + str(random.randint(1, 9)) + "期"
+                    name = random_community_name(city) + str(random.randint(1, 9)) + "期"
                     build_year = random.randint(*profile["build_year_range"])
                     total_units = random.randint(200, 3000)
                     prop_fee = round(random.uniform(1.5, 8.0), 1)
@@ -245,8 +337,8 @@ def generate_all():
                     community_price_factor = random.gauss(1.0, 0.12)
                     community_base = base_price * community_price_factor
 
-                    # 生成挂牌数据（每个小区5-15条）
-                    n_listings = random.randint(5, 15)
+                    # 生成挂牌数据（大理更密集）
+                    n_listings = random.randint(10, 25) if city == "大理" else random.randint(5, 15)
                     for _ in range(n_listings):
                         area = round(random.choice([60, 70, 80, 89, 90, 100, 110, 120, 140]) + random.gauss(0, 5), 1)
                         area = max(30, area)
@@ -267,9 +359,9 @@ def generate_all():
                         """, (community_id, area, total_price, unit_price, floor,
                               deco, orient, beds, listing_date, datetime.now().strftime("%Y-%m-%d")))
 
-                    # 生成历史成交数据（2015-2025各年各若干条）
+                    # 生成历史成交数据（大理更密集）
                     for year, price_idx in HISTORICAL_PRICE_INDEX.items():
-                        n_deals = random.randint(2, 8)
+                        n_deals = random.randint(5, 12) if city == "大理" else random.randint(2, 8)
                         for _ in range(n_deals):
                             area = round(random.choice([60, 70, 80, 89, 90, 100, 110, 120, 140]) + random.gauss(0, 5), 1)
                             area = max(30, area)
@@ -401,11 +493,10 @@ def generate_all():
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                     """, (city, district, sector, s_price, s_rent, n_comm, ""))
 
-                    # 为每个板块生成2-4个典型成交案例
-                    for deal_year in random.sample(
-                        [y for y in [2017, 2019, 2020, 2021, 2022, 2023, 2024] if y in HISTORICAL_PRICE_INDEX],
-                        min(4, len(HISTORICAL_PRICE_INDEX))
-                    ):
+                    # 为每个板块生成典型成交案例（大理更多）
+                    all_years = [y for y in [2017, 2019, 2020, 2021, 2022, 2023, 2024] if y in HISTORICAL_PRICE_INDEX]
+                    n_case_years = min(6, len(all_years)) if city == "大理" else min(4, len(all_years))
+                    for deal_year in random.sample(all_years, n_case_years):
                         price_idx = HISTORICAL_PRICE_INDEX[deal_year]
                         area = random.choice([70, 85, 89, 90, 100, 110, 120])
                         beds = 2 if area < 85 else (3 if area < 115 else 4)
@@ -416,7 +507,7 @@ def generate_all():
                         profit = round(current_val - total_buy, 1)
                         years = 2025 - deal_year
                         ann_ret = round(((current_val / total_buy) ** (1 / max(years, 1)) - 1) * 100, 2) if total_buy > 0 else 0
-                        comm_name = random_community_name()
+                        comm_name = random_community_name(city)
 
                         conn.execute("""
                             INSERT INTO deal_cases

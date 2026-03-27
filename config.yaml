@@ -88,6 +88,45 @@ cities:
       - {name: 晋江, code: jinjiang_qz}
       - {name: 石狮, code: shishi}
       - {name: 南安, code: nanan}
+  kunming:
+    name: 昆明
+    districts:
+      - {name: 五华, code: wuhua}
+      - {name: 盘龙, code: panlong}
+      - {name: 官渡, code: guandu}
+      - {name: 西山, code: xishan}
+      - {name: 呈贡, code: chenggong}
+      - {name: 晋宁, code: jinning}
+  dali:
+    name: 大理
+    districts:
+      - {name: 大理古城, code: gucheng}
+      - {name: 下关, code: xiaguan}
+      - {name: 海东, code: haidong}
+      - {name: 凤仪, code: fengyi}
+      - {name: 喜洲, code: xizhou}
+      - {name: 双廊, code: shuanglang}
+      - {name: 银桥, code: yinqiao}
+      - {name: 湾桥, code: wanqiao}
+      - {name: 挖色, code: wase}
+  lijiang:
+    name: 丽江
+    districts:
+      - {name: 古城区, code: guchengqu}
+      - {name: 束河, code: shuhe}
+      - {name: 玉龙, code: yulong}
+  qujing:
+    name: 曲靖
+    districts:
+      - {name: 麒麟, code: qilin}
+      - {name: 沾益, code: zhanyi}
+      - {name: 马龙, code: malong}
+  yuxi:
+    name: 玉溪
+    districts:
+      - {name: 红塔, code: hongta}
+      - {name: 江川, code: jiangchuan}
+      - {name: 澄江, code: chengjiang}
 
 # 估值模型参数
 valuation:
