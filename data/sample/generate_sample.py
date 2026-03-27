@@ -149,6 +149,11 @@ DISTRICT_PROFILES = {
 # 历史价格系数（相对于当前价格的倍数）
 # 模拟中国房地产历史走势
 HISTORICAL_PRICE_INDEX = {
+    2010: 0.32,
+    2011: 0.35,
+    2012: 0.36,
+    2013: 0.40,
+    2014: 0.45,
     2015: 0.55,
     2016: 0.65,
     2017: 0.80,
@@ -444,8 +449,8 @@ def generate_all():
                         """, (community_id, area, monthly_rent, round(rent_psm, 1),
                               beds, deco, listing_date))
 
-                # 生成区域统计快照
-                for year in range(2020, 2027):
+                # 生成区域统计快照（从2015年开始，覆盖完整历史周期）
+                for year in range(2015, 2027):
                     for month in range(1, 13):
                         if year == 2026 and month > 3:
                             break
