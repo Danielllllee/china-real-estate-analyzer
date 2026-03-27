@@ -7,7 +7,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.historical_return import calculate_historical_return, compare_purchase_years
-from utils.styles import inject_global_css, hero_section, metric_card, apply_plotly_style, PLOTLY_COLORS, COLORS
+from utils.styles import inject_global_css, hero_section, metric_card, apply_plotly_style, get_district_names, PLOTLY_COLORS, COLORS
 import yaml
 
 st.set_page_config(page_title="收益率分析", page_icon="📈", layout="wide")
@@ -32,8 +32,9 @@ with tab1:
         city_names = {k: v["name"] for k, v in config["cities"].items()}
         sc = st.selectbox("城市", list(city_names.values()), key="s_city")
         ck = [k for k, v in config["cities"].items() if v["name"] == sc][0]
-        dn = [d["name"] for d in config["cities"][ck]["districts"]]
-        sd = st.selectbox("区域", dn, key="s_dist")
+        dp = get_district_names(config["cities"][ck])
+        sd_idx = st.selectbox("区域", range(len(dp)), format_func=lambda i: dp[i][0], key="s_dist")
+        sd = dp[sd_idx][1]
     with col2:
         py = st.number_input("买入年份", 2015, 2025, 2020)
         area = st.number_input("面积（㎡）", 30, 500, 90, key="s_area")
@@ -124,8 +125,9 @@ with tab2:
         cn2 = {k: v["name"] for k, v in config["cities"].items()}
         c2 = st.selectbox("城市", list(cn2.values()), key="c_city")
         ck2 = [k for k, v in config["cities"].items() if v["name"] == c2][0]
-        dn2 = [d["name"] for d in config["cities"][ck2]["districts"]]
-        d2 = st.selectbox("区域", dn2, key="c_dist")
+        dp2 = get_district_names(config["cities"][ck2])
+        d2_idx = st.selectbox("区域", range(len(dp2)), format_func=lambda i: dp2[i][0], key="c_dist")
+        d2 = dp2[d2_idx][1]
     with col2:
         a2 = st.number_input("面积（㎡）", 30, 500, 90, key="c_area")
     with col3:

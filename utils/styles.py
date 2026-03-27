@@ -445,3 +445,27 @@ def apply_plotly_style(fig, height=400):
         height=height,
     )
     return fig
+
+
+def get_district_names(city_config, with_hierarchy_prefix=True):
+    """从城市配置中提取区域名列表，带层级前缀。
+    返回: [(display_name, actual_name), ...]
+    display_name 用于 UI 展示，actual_name 用于数据查询。
+    """
+    districts = city_config.get("districts", [])
+    parent_map = {}  # parent_name -> [child dicts]
+    top_level = []
+    for d in districts:
+        if "parent" in d:
+            parent_map.setdefault(d["parent"], []).append(d)
+        else:
+            top_level.append(d)
+
+    result = []
+    for d in top_level:
+        result.append((d["name"], d["name"]))
+        if d["name"] in parent_map:
+            for child in parent_map[d["name"]]:
+                prefix = "  ↳ " if with_hierarchy_prefix else ""
+                result.append((f"{prefix}{child['name']}", child["name"]))
+    return result

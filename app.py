@@ -43,7 +43,7 @@ inject_global_css()
 # ============ Hero 区域 ============
 hero_section(
     "中国房产估值与收益率分析系统",
-    "从第一性原理出发，覆盖14个城市的学术级房产投资分析平台 | 数据更新至2026年3月",
+    f"从第一性原理出发，覆盖{len(config['cities'])}个城市的学术级房产投资分析平台 | 数据更新至2026年3月",
 )
 
 # ============ 核心指标卡片 ============
@@ -88,10 +88,24 @@ city_items = list(config["cities"].items())
 grid_cols = st.columns(3)
 for idx, (key, city_info) in enumerate(city_items):
     with grid_cols[idx % 3]:
-        districts = "、".join(d["name"] for d in city_info["districts"])
+        # Build hierarchical district display
+        parent_map = {}  # parent_name -> [child_names]
+        top_level = []
+        for d in city_info["districts"]:
+            if "parent" in d:
+                parent_map.setdefault(d["parent"], []).append(d["name"])
+            else:
+                top_level.append(d["name"])
+        district_parts = []
+        for name in top_level:
+            district_parts.append(name)
+            if name in parent_map:
+                for child in parent_map[name]:
+                    district_parts.append(f'<span style="color:#0f3460;font-weight:500;">↳{child}</span>')
+        districts_html = "、".join(district_parts)
         st.markdown(f"""
         <div class="content-card" style="min-height:80px;">
             <h3 style="margin-bottom:8px;border:none;padding:0;">{city_info['name']}</h3>
-            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.6;">{districts}</p>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.6;">{districts_html}</p>
         </div>
         """, unsafe_allow_html=True)

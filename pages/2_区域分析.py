@@ -16,7 +16,7 @@ from models.composite import composite_valuation
 from utils.styles import (
     inject_global_css, hero_section, metric_card, score_badge,
     status_tag, content_card, case_card, apply_plotly_style,
-    PLOTLY_COLORS, COLORS,
+    get_district_names, PLOTLY_COLORS, COLORS,
 )
 
 st.set_page_config(page_title="区域分析", page_icon="📊", layout="wide")
@@ -44,9 +44,13 @@ city_names = {k: v["name"] for k, v in config["cities"].items()}
 with col_sel1:
     selected_city = st.selectbox("选择城市", list(city_names.values()), label_visibility="collapsed")
 city_key = [k for k, v in config["cities"].items() if v["name"] == selected_city][0]
-district_names = [d["name"] for d in config["cities"][city_key]["districts"]]
+district_pairs = get_district_names(config["cities"][city_key])
+district_display = [dp[0] for dp in district_pairs]
+district_actual = [dp[1] for dp in district_pairs]
 with col_sel2:
-    selected_district = st.selectbox("选择区域", district_names, label_visibility="collapsed")
+    sel_idx = st.selectbox("选择区域", range(len(district_display)),
+                           format_func=lambda i: district_display[i], label_visibility="collapsed")
+    selected_district = district_actual[sel_idx]
 
 # ── 生成报告 ─────────────────────────────────────────────────
 with st.spinner("正在生成智能分析报告..."):

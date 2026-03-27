@@ -88,6 +88,25 @@ cities:
       - {name: 晋江, code: jinjiang_qz}
       - {name: 石狮, code: shishi}
       - {name: 南安, code: nanan}
+      - {name: 安溪, code: anxi}
+  putian:
+    name: 莆田
+    districts:
+      - {name: 城厢, code: chengxiang}
+      - {name: 涵江, code: hanjiang}
+      - {name: 荔城, code: licheng_pt}
+      - {name: 秀屿, code: xiuyu}
+      - {name: 仙游, code: xianyou}
+  langfang:
+    name: 廊坊
+    districts:
+      - {name: 广阳, code: guangyang}
+      - {name: 安次, code: anci}
+      - {name: 霸州, code: bazhou}
+      - {name: 胜芳, code: shengfang, parent: 霸州}
+      - {name: 固安, code: guan}
+      - {name: 香河, code: xianghe}
+      - {name: 燕郊, code: yanjiao}
   kunming:
     name: 昆明
     districts:

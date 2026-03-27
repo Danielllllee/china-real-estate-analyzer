@@ -5,7 +5,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.composite import composite_valuation
-from utils.styles import inject_global_css, hero_section, metric_card, apply_plotly_style, PLOTLY_COLORS, COLORS
+from utils.styles import inject_global_css, hero_section, metric_card, apply_plotly_style, get_district_names, PLOTLY_COLORS, COLORS
 import yaml
 
 st.set_page_config(page_title="估值计算器", page_icon="🧮", layout="wide")
@@ -30,8 +30,9 @@ with col1:
     city_names = {k: v["name"] for k, v in config["cities"].items()}
     selected_city = st.selectbox("城市", list(city_names.values()))
     city_key = [k for k, v in config["cities"].items() if v["name"] == selected_city][0]
-    district_names = [d["name"] for d in config["cities"][city_key]["districts"]]
-    selected_district = st.selectbox("区域", district_names)
+    dp = get_district_names(config["cities"][city_key])
+    sel_d = st.selectbox("区域", range(len(dp)), format_func=lambda i: dp[i][0])
+    selected_district = dp[sel_d][1]
 
 with col2:
     area = st.number_input("面积（㎡）", min_value=20, max_value=500, value=90)
