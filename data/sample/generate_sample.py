@@ -373,6 +373,9 @@ DISTRICT_SECTORS = {
 def generate_all():
     init_db()
     with get_connection() as conn:
+        # 清理旧的虚假数据表（如果存在残留数据）
+        for table in ['communities', 'listings', 'transactions', 'rentals', 'deal_cases']:
+            conn.execute(f"DELETE FROM {table}")
         for city, districts in DISTRICT_PROFILES.items():
             for district, profile in districts.items():
                 # 生成区域统计快照（从2015年开始，覆盖完整历史周期）

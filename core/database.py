@@ -172,8 +172,10 @@ def ensure_data():
     """确保数据库已初始化且有数据（首次运行时自动生成）"""
     init_db()
     with get_connection() as conn:
-        count = conn.execute("SELECT COUNT(*) FROM district_stats").fetchone()[0]
-    if count == 0:
+        ds_count = conn.execute("SELECT COUNT(*) FROM district_stats").fetchone()[0]
+        # 检查是否有残留的虚假小区数据需要清理
+        fake_count = conn.execute("SELECT COUNT(*) FROM communities").fetchone()[0]
+    if ds_count == 0 or fake_count > 0:
         from data.sample.generate_sample import generate_all
         generate_all()
 
