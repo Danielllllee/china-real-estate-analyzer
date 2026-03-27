@@ -142,7 +142,8 @@ HISTORICAL_PRICE_INDEX = {
     2022: 0.98,
     2023: 0.95,
     2024: 0.92,
-    2025: 0.90,
+    2025: 0.88,
+    2026: 0.86,
 }
 
 # 宏观数据参考
@@ -408,9 +409,9 @@ def generate_all():
                               beds, deco, listing_date))
 
                 # 生成区域统计快照
-                for year in range(2020, 2026):
+                for year in range(2020, 2027):
                     for month in range(1, 13):
-                        if year == 2025 and month > 3:
+                        if year == 2026 and month > 3:
                             break
                         month_str = f"{year}-{month:02d}"
                         price_idx = HISTORICAL_PRICE_INDEX.get(year, 0.92)
@@ -453,7 +454,7 @@ def generate_all():
 
             # 宏观数据
             mp = MACRO_PROFILES[city]
-            for year in range(2018, 2026):
+            for year in range(2018, 2027):
                 yr_offset = year - 2024
                 pop = round(mp["pop"] * (1 + 0.005 * yr_offset), 1)
                 gdp = round(mp["gdp"] * (1 + mp["gdp_g"]) ** yr_offset, 1)
@@ -494,7 +495,7 @@ def generate_all():
                     """, (city, district, sector, s_price, s_rent, n_comm, ""))
 
                     # 为每个板块生成典型成交案例（大理更多）
-                    all_years = [y for y in [2017, 2019, 2020, 2021, 2022, 2023, 2024] if y in HISTORICAL_PRICE_INDEX]
+                    all_years = [y for y in [2017, 2019, 2020, 2021, 2022, 2023, 2024, 2025] if y in HISTORICAL_PRICE_INDEX]
                     n_case_years = min(6, len(all_years)) if city == "大理" else min(4, len(all_years))
                     for deal_year in random.sample(all_years, n_case_years):
                         price_idx = HISTORICAL_PRICE_INDEX[deal_year]
@@ -502,10 +503,10 @@ def generate_all():
                         beds = 2 if area < 85 else (3 if area < 115 else 4)
                         buy_price = round(s_price * price_idx * random.gauss(1.0, 0.05))
                         total_buy = round(buy_price * area / 10000, 1)
-                        current_idx = HISTORICAL_PRICE_INDEX.get(2025, 0.90)
+                        current_idx = HISTORICAL_PRICE_INDEX.get(2026, 0.86)
                         current_val = round(s_price * current_idx * area / 10000, 1)
                         profit = round(current_val - total_buy, 1)
-                        years = 2025 - deal_year
+                        years = 2026 - deal_year
                         ann_ret = round(((current_val / total_buy) ** (1 / max(years, 1)) - 1) * 100, 2) if total_buy > 0 else 0
                         comm_name = random_community_name(city)
 

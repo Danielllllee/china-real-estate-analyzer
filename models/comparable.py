@@ -115,7 +115,7 @@ def estimate_by_comparable(
             "error": "无可比交易数据",
         }
 
-    current_year = 2025
+    current_year = 2026
     adjusted_prices = []
 
     for _, txn in txns.iterrows():

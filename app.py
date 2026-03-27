@@ -10,12 +10,12 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from utils.database import init_db, get_db_path
+from utils.styles import inject_global_css, hero_section, metric_card
 
 st.set_page_config(
     page_title="房产估值分析系统",
-    page_icon="🏠",
+    page_icon="\U0001f3db",
     layout="wide",
-    initial_sidebar_state="expanded",
 )
 
 # 初始化数据库
@@ -35,45 +35,63 @@ def load_config():
         return yaml.safe_load(f)
 
 config = load_config()
+total_districts = sum(len(c["districts"]) for c in config["cities"].values())
 
-st.title("中国房产估值与收益率分析系统")
+# ============ 全局样式 ============
+inject_global_css()
+
+# ============ Hero 区域 ============
+hero_section(
+    "中国房产估值与收益率分析系统",
+    "从第一性原理出发，覆盖14个城市的学术级房产投资分析平台 | 数据更新至2026年3月",
+)
+
+# ============ 核心指标卡片 ============
+cols = st.columns(4)
+with cols[0]:
+    st.markdown(metric_card("\U0001f4ca", "覆盖城市", f"{len(config['cities'])} 个"), unsafe_allow_html=True)
+with cols[1]:
+    st.markdown(metric_card("\U0001f3d8", "覆盖区域", f"{total_districts} 个"), unsafe_allow_html=True)
+with cols[2]:
+    st.markdown(metric_card("\U0001f9ee", "估值模型", "4 个"), unsafe_allow_html=True)
+with cols[3]:
+    st.markdown(metric_card("\U0001f4c8", "数据截至", "2026年3月"), unsafe_allow_html=True)
+
+# ============ 功能导航 ============
 st.markdown("---")
+st.markdown("### 功能导航")
 
-st.markdown("""
-### 系统功能
+features = [
+    ("\U0001f3d9", "城市概览", "各区域房价、租售比、投资评分一览"),
+    ("\U0001f4ca", "区域分析", "深度解读：是否值得买？具体板块推荐"),
+    ("\U0001f9ee", "估值计算器", "四大模型综合估值，输入即出结果"),
+    ("\U0001f4c8", "收益率分析", "历史回报率、IRR、全成本计算"),
+    ("\U0001f30f", "城市对比", "多城市横向对比，找到性价比之王"),
+]
 
-本系统从**第一性原理**出发，提供学术级别的房产估值和投资回报分析：
+feat_cols = st.columns(5)
+for i, (icon, title, desc) in enumerate(features):
+    with feat_cols[i]:
+        st.markdown(f"""
+        <div class="feature-card animate-in">
+            <div class="icon">{icon}</div>
+            <h4>{title}</h4>
+            <p>{desc}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-**四大估值模型**
-- **租金收益率法** — 房产作为现金流资产的合理定价
-- **可比交易法** — 基于真实成交数据的市场定价
-- **现金流折现（DCF）** — 未来租金收入的现值估算
-- **成本法** — 土地+建造的重置成本底线
-
-**投资分析**
-- 全面的买入成本和持有成本计算
-- 预期收益率（含IRR）分析
-- 历史不同时期买入者的实际回报对比
-- 跨城市、跨区域的性价比排名
-
----
-""")
-
-# 快速概览
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.metric("覆盖城市", f"{len(config['cities'])} 个")
-with col2:
-    total_districts = sum(len(c["districts"]) for c in config["cities"].values())
-    st.metric("覆盖区域", f"{total_districts} 个")
-with col3:
-    st.metric("估值模型", "4 个")
-
+# ============ 支持的城市 ============
 st.markdown("---")
-st.markdown("👈 **请在左侧菜单选择功能页面开始分析**")
+st.markdown("### 支持的城市")
 
-# 支持的城市列表
-st.subheader("支持的城市")
-for key, city_info in config["cities"].items():
-    districts = "、".join(d["name"] for d in city_info["districts"])
-    st.markdown(f"**{city_info['name']}**：{districts}")
+city_items = list(config["cities"].items())
+grid_cols = st.columns(3)
+for idx, (key, city_info) in enumerate(city_items):
+    with grid_cols[idx % 3]:
+        districts = "、".join(d["name"] for d in city_info["districts"])
+        st.markdown(f"""
+        <div class="content-card" style="min-height:80px;">
+            <h3 style="margin-bottom:8px;border:none;padding:0;">{city_info['name']}</h3>
+            <p style="font-size:13px;color:#64748b;margin:0;line-height:1.6;">{districts}</p>
+        </div>
+        """, unsafe_allow_html=True)
