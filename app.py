@@ -1,4 +1,4 @@
-"""中国房产估值与收益率分析系统 - 主入口"""
+"""中国房产估值与收益率分析系统 - 主入口 v2.1"""
 import streamlit as st
 import os
 import sys
