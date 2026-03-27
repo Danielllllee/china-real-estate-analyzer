@@ -1,5 +1,5 @@
 """跨城市/跨区域对比分析"""
-from utils.database import query_df
+from core.database import query_df
 
 
 def compare_cities(cities: list) -> dict:

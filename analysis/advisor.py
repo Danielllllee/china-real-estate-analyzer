@@ -4,7 +4,7 @@
 包含明确的结论、理由、风险提示和具体板块建议。
 面向小白用户，语言通俗易懂。
 """
-from utils.database import query_df
+from core.database import query_df
 from analysis.risk import assess_market_risk
 from analysis.metrics import calculate_affordability
 

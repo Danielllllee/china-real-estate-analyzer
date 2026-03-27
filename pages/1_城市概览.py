@@ -13,7 +13,7 @@ if _ROOT not in sys.path:
 
 from analysis.metrics import get_city_overview
 from analysis.advisor import generate_city_summary
-from utils.styles import (
+from core.styles import (
     inject_global_css,
     hero_section,
     district_score_card,

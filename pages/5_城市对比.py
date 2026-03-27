@@ -9,7 +9,7 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from analysis.comparison import compare_cities, compare_districts
-from utils.styles import inject_global_css, hero_section, metric_card, apply_plotly_style, PLOTLY_COLORS, COLORS
+from core.styles import inject_global_css, hero_section, metric_card, apply_plotly_style, PLOTLY_COLORS, COLORS
 import yaml
 
 st.set_page_config(page_title="城市对比", page_icon="🌏", layout="wide")

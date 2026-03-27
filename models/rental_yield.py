@@ -8,7 +8,7 @@
 如果低于该估值，说明有安全边际。
 """
 import numpy as np
-from utils.database import query_df
+from core.database import query_df
 
 
 def get_area_rental_data(city: str, district: str) -> dict:
