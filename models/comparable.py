@@ -21,32 +21,25 @@ def get_comparable_transactions(
     months: int = 6,
     min_samples: int = 5,
 ) -> dict:
-    """获取可比交易数据"""
-    if community_id:
-        # 先找同小区成交
-        txns = query_df("""
-            SELECT t.*, c.build_year, c.name as community_name
-            FROM transactions t
-            JOIN communities c ON t.community_id = c.id
-            WHERE t.community_id = ?
-            AND t.deal_date >= date('now', ?)
-            ORDER BY t.deal_date DESC
-        """, [community_id, f"-{months} months"])
+    """获取可比价格数据（基于区域统计数据）"""
+    stats = query_df("""
+        SELECT month, avg_unit_price as unit_price,
+               median_unit_price, avg_deal_cycle
+        FROM district_stats
+        WHERE city = ? AND district = ?
+        ORDER BY month DESC
+        LIMIT 12
+    """, [city, district])
 
-        if len(txns) >= min_samples:
-            return {"level": "community", "data": txns}
+    if stats.empty:
+        return {"level": "district", "data": stats}
 
-    # 同区域成交
-    txns = query_df("""
-        SELECT t.*, c.build_year, c.name as community_name
-        FROM transactions t
-        JOIN communities c ON t.community_id = c.id
-        WHERE c.city = ? AND c.district = ?
-        AND t.deal_date >= date('now', ?)
-        ORDER BY t.deal_date DESC
-    """, [city, district, f"-{months} months"])
-
-    return {"level": "district", "data": txns}
+    # 构造兼容的DataFrame
+    stats["floor_level"] = "mid"
+    stats["decoration"] = "fine"
+    stats["orientation"] = "south"
+    stats["build_year"] = 2015
+    return {"level": "district", "data": stats}
 
 
 def adjust_price(

@@ -5,7 +5,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 import random
 import numpy as np
-from datetime import datetime, timedelta
 from core.database import init_db, get_connection
 
 random.seed(42)
@@ -371,131 +370,11 @@ DISTRICT_SECTORS = {
     },
 }
 
-# 大理特殊：增加更多本地化小区名
-DALI_COMMUNITY_NAMES = [
-    "苍洱", "洱海", "苍山", "大理", "风花", "雪月", "蝴蝶", "三塔",
-    "白族", "南诏", "崇圣", "洱源", "银苍", "玉带", "感通", "天龙",
-]
-DALI_SUFFIX = [
-    "小院", "庭院", "别院", "雅居", "民宿", "花园", "山庄", "院子",
-    "半岛", "海景房", "观海居", "云居", "栖居", "云舍", "静庐", "雅苑",
-]
-
-
-COMMUNITY_NAME_PARTS = [
-    ["阳光", "翠苑", "金色", "绿城", "万科", "保利", "中海", "华润", "融创", "龙湖",
-     "碧桂", "恒大", "远洋", "首开", "招商", "金地", "世茂", "新城", "旭辉", "绿地"],
-    ["花园", "雅苑", "家园", "公馆", "华庭", "新城", "嘉园", "名苑", "豪庭", "美景",
-     "府邸", "天下", "国际", "广场", "中心", "壹号", "御苑", "锦苑", "丽景", "雅居"],
-]
-
-
-def random_community_name(city=None):
-    if city == "大理":
-        return random.choice(DALI_COMMUNITY_NAMES) + random.choice(DALI_SUFFIX)
-    return random.choice(COMMUNITY_NAME_PARTS[0]) + random.choice(COMMUNITY_NAME_PARTS[1])
-
-
 def generate_all():
     init_db()
     with get_connection() as conn:
-        community_id = 0
         for city, districts in DISTRICT_PROFILES.items():
             for district, profile in districts.items():
-                # 大理高精度：每区域生成更多小区
-                if city == "大理":
-                    n_communities = random.randint(20, 35)
-                else:
-                    n_communities = random.randint(10, 20)
-                for _ in range(n_communities):
-                    community_id += 1
-                    name = random_community_name(city) + str(random.randint(1, 9)) + "期"
-                    build_year = random.randint(*profile["build_year_range"])
-                    total_units = random.randint(200, 3000)
-                    prop_fee = round(random.uniform(1.5, 8.0), 1)
-
-                    conn.execute("""
-                        INSERT OR IGNORE INTO communities
-                        (id, city, district, name, build_year, total_units, property_fee)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """, (community_id, city, district, name, build_year, total_units, prop_fee))
-
-                    base_price = profile["price"]
-                    # 小区间价格有波动（±20%）
-                    community_price_factor = random.gauss(1.0, 0.12)
-                    community_base = base_price * community_price_factor
-
-                    # 生成挂牌数据（大理更密集）
-                    n_listings = random.randint(10, 25) if city == "大理" else random.randint(5, 15)
-                    for _ in range(n_listings):
-                        area = round(random.choice([60, 70, 80, 89, 90, 100, 110, 120, 140]) + random.gauss(0, 5), 1)
-                        area = max(30, area)
-                        unit_price = round(community_base * random.gauss(1.0, 0.08))
-                        total_price = round(unit_price * area / 10000, 1)  # 万元
-                        floor = random.choice(["low", "mid", "mid_high", "high"])
-                        deco = random.choice(["rough", "simple", "fine", "fine", "fine"])
-                        orient = random.choice(["south", "south_north", "east", "west"])
-                        beds = random.choice([1, 2, 2, 3, 3, 3, 4])
-                        days_ago = random.randint(1, 90)
-                        listing_date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-
-                        conn.execute("""
-                            INSERT INTO listings
-                            (community_id, area, total_price, unit_price, floor_level,
-                             decoration, orientation, bedroom_count, listing_date, crawl_date)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (community_id, area, total_price, unit_price, floor,
-                              deco, orient, beds, listing_date, datetime.now().strftime("%Y-%m-%d")))
-
-                    # 生成历史成交数据（大理更密集）
-                    city_price_index = get_price_index(city)
-                    for year, price_idx in city_price_index.items():
-                        n_deals = random.randint(5, 12) if city == "大理" else random.randint(2, 8)
-                        for _ in range(n_deals):
-                            area = round(random.choice([60, 70, 80, 89, 90, 100, 110, 120, 140]) + random.gauss(0, 5), 1)
-                            area = max(30, area)
-                            hist_price = community_base * price_idx * random.gauss(1.0, 0.06)
-                            unit_price = round(hist_price)
-                            total_price = round(unit_price * area / 10000, 1)
-                            listing_price = round(total_price * random.uniform(1.02, 1.15), 1)
-                            floor = random.choice(["low", "mid", "mid_high", "high"])
-                            deco = random.choice(["rough", "simple", "fine", "fine"])
-                            orient = random.choice(["south", "south_north", "east", "west"])
-                            beds = random.choice([1, 2, 2, 3, 3, 3, 4])
-                            month = random.randint(1, 12)
-                            day = random.randint(1, 28)
-                            deal_date = f"{year}-{month:02d}-{day:02d}"
-                            deal_cycle = random.randint(30, 180)
-
-                            conn.execute("""
-                                INSERT INTO transactions
-                                (community_id, area, total_price, unit_price, listing_price,
-                                 floor_level, decoration, orientation, bedroom_count,
-                                 deal_date, deal_cycle)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                            """, (community_id, area, total_price, unit_price, listing_price,
-                                  floor, deco, orient, beds, deal_date, deal_cycle))
-
-                    # 生成租金数据
-                    n_rentals = random.randint(3, 8)
-                    for _ in range(n_rentals):
-                        area = round(random.choice([40, 50, 60, 70, 80, 90, 100, 120]) + random.gauss(0, 3), 1)
-                        area = max(25, area)
-                        rent_psm = profile["rent"] * random.gauss(1.0, 0.15)
-                        monthly_rent = round(rent_psm * area)
-                        beds = random.choice([1, 1, 2, 2, 3, 3])
-                        deco = random.choice(["simple", "fine", "fine"])
-                        days_ago = random.randint(1, 60)
-                        listing_date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
-
-                        conn.execute("""
-                            INSERT INTO rentals
-                            (community_id, area, monthly_rent, rent_per_sqm,
-                             bedroom_count, decoration, listing_date)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """, (community_id, area, monthly_rent, round(rent_psm, 1),
-                              beds, deco, listing_date))
-
                 # 生成区域统计快照（从2015年开始，覆盖完整历史周期）
                 for year in range(2015, 2027):
                     for month in range(1, 13):
@@ -558,7 +437,7 @@ def generate_all():
                       round(0.05 + random.gauss(0, 0.01), 3),
                       round(1.02 + random.gauss(0, 0.005), 3)))
 
-        # 板块数据和典型案例
+        # 板块数据（真实板块名称，价格由区域均价推算）
         for city, districts in DISTRICT_SECTORS.items():
             if city not in DISTRICT_PROFILES:
                 continue
@@ -582,34 +461,6 @@ def generate_all():
                          community_count, description)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
                     """, (city, district, sector, s_price, s_rent, n_comm, ""))
-
-                    # 为每个板块生成典型成交案例（大理更多）
-                    case_price_index = get_price_index(city)
-                    all_years = [y for y in [2017, 2019, 2020, 2021, 2022, 2023, 2024, 2025] if y in case_price_index]
-                    n_case_years = min(6, len(all_years)) if city == "大理" else min(4, len(all_years))
-                    for deal_year in random.sample(all_years, n_case_years):
-                        price_idx = case_price_index[deal_year]
-                        area = random.choice([70, 85, 89, 90, 100, 110, 120])
-                        beds = 2 if area < 85 else (3 if area < 115 else 4)
-                        buy_price = round(s_price * price_idx * random.gauss(1.0, 0.05))
-                        total_buy = round(buy_price * area / 10000, 1)
-                        current_idx = case_price_index.get(2026, 0.85)
-                        current_val = round(s_price * current_idx * area / 10000, 1)
-                        profit = round(current_val - total_buy, 1)
-                        years = 2026 - deal_year
-                        ann_ret = round(((current_val / total_buy) ** (1 / max(years, 1)) - 1) * 100, 2) if total_buy > 0 else 0
-                        comm_name = random_community_name(city)
-
-                        conn.execute("""
-                            INSERT INTO deal_cases
-                            (city, district, sector_name, community_name, deal_year,
-                             area, bedroom_count, total_price_wan, unit_price,
-                             current_value_wan, profit_loss_wan, annualized_return, description)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """, (city, district, sector, comm_name, deal_year,
-                              area, beds, total_buy, buy_price,
-                              current_val, profit, ann_ret,
-                              f"{deal_year}年以{buy_price}元/㎡买入{area}㎡{beds}房"))
 
     print("示例数据生成完成！")
 

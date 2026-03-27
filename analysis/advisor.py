@@ -49,13 +49,6 @@ def generate_district_report(city: str, district: str) -> dict:
         ORDER BY avg_unit_price DESC
     """, [city, district])
 
-    # 历史案例
-    cases = query_df("""
-        SELECT * FROM deal_cases
-        WHERE city = ? AND district = ?
-        ORDER BY deal_year DESC
-    """, [city, district])
-
     # 风险评估
     risk = assess_market_risk(city, district)
 
@@ -202,40 +195,12 @@ def generate_district_report(city: str, district: str) -> dict:
                 "recommendation": recommendation,
             })
 
-    # ---- 6. 典型案例解读 ----
-    case_stories = []
-    if not cases.empty:
-        for _, c in cases.iterrows():
-            profit = c["profit_loss_wan"]
-            ret = c["annualized_return"]
-            if profit > 0:
-                outcome = f"盈利{profit:.1f}万元，年化回报{ret:.1f}%"
-            elif profit < 0:
-                outcome = f"亏损{abs(profit):.1f}万元，年化回报{ret:.1f}%"
-            else:
-                outcome = "基本持平"
-
-            story = (
-                f"【{c['sector_name']}·{c['community_name']}】"
-                f"{c['deal_year']}年买入{c['area']:.0f}㎡{c['bedroom_count']}房，"
-                f"总价{c['total_price_wan']:.1f}万（单价{c['unit_price']:,.0f}元/㎡）→ "
-                f"当前估值约{c['current_value_wan']:.1f}万，{outcome}"
-            )
-            case_stories.append({
-                "year": c["deal_year"],
-                "sector": c["sector_name"],
-                "community": c["community_name"],
-                "story": story,
-                "profit": profit,
-                "return_pct": ret,
-            })
-
-    # ---- 7. 组装完整报告 ----
+    # ---- 6. 组装完整报告 ----
     # 生成大白话解读
     plain_text = _generate_plain_text(
         city, district, avg_price, annual_yield, price_trend_1y,
         months_of_supply, score, verdict, afford, sector_recommendations,
-        case_stories, risk,
+        risk,
     )
 
     return {
@@ -258,14 +223,13 @@ def generate_district_report(city: str, district: str) -> dict:
         "affordability": afford,
         "risk": risk if "error" not in risk else None,
         "sector_recommendations": sector_recommendations,
-        "case_stories": case_stories,
         "plain_text_report": plain_text,
     }
 
 
 def _generate_plain_text(
     city, district, avg_price, annual_yield, price_trend_1y,
-    months_of_supply, score, verdict, afford, sectors, cases, risk,
+    months_of_supply, score, verdict, afford, sectors, risk,
 ):
     """生成面向小白的大白话解读"""
     lines = []
@@ -355,24 +319,6 @@ def _generate_plain_text(
                 tag = "👀 "
             lines.append(f"- {tag}**{s['name']}**：均价{s['avg_price']:,}元/㎡，"
                          f"租金回报{s['yield_pct']}%，{s['recommendation']}")
-        lines.append("")
-
-    # 历史案例
-    if cases:
-        lines.append(f"### 以前买的人赚了还是亏了？")
-        # 按年份分组展示
-        profit_cases = [c for c in cases if c["profit"] > 0]
-        loss_cases = [c for c in cases if c["profit"] <= 0]
-
-        if profit_cases:
-            lines.append(f"**赚钱的案例（{len(profit_cases)}个）：**")
-            for c in profit_cases[:3]:
-                lines.append(f"- {c['story']}")
-
-        if loss_cases:
-            lines.append(f"**亏损的案例（{len(loss_cases)}个）：**")
-            for c in loss_cases[:3]:
-                lines.append(f"- {c['story']}")
         lines.append("")
 
     # 风险提示

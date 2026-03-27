@@ -53,15 +53,14 @@ def get_city_monthly_trend(city: str) -> pd.DataFrame:
 
 @st.cache_data(ttl=600)
 def get_city_yearly_trend(city: str) -> pd.DataFrame:
-    """从 transactions 表聚合年度均价（2015-2026），用于更长周期"""
+    """从 district_stats 聚合年度均价（2015-2026）"""
     return query_df("""
-        SELECT SUBSTR(t.deal_date, 1, 4) as year,
-               ROUND(AVG(t.unit_price)) as avg_price,
-               COUNT(*) as deal_count
-        FROM transactions t
-        JOIN communities c ON t.community_id = c.id
-        WHERE c.city = ?
-        GROUP BY SUBSTR(t.deal_date, 1, 4)
+        SELECT SUBSTR(month, 1, 4) as year,
+               ROUND(AVG(avg_unit_price)) as avg_price,
+               SUM(transaction_count) as deal_count
+        FROM district_stats
+        WHERE city = ?
+        GROUP BY SUBSTR(month, 1, 4)
         ORDER BY year
     """, [city])
 

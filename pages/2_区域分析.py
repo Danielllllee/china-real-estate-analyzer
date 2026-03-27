@@ -106,7 +106,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # ── 主内容 Tabs ──────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs(["📖 投资解读", "🏘️ 板块分析", "📜 历史案例", "⚠️ 风险与估值"])
+tab1, tab2, tab4 = st.tabs(["📖 投资解读", "🏘️ 板块分析", "⚠️ 风险与估值"])
 
 # ============================================================
 # Tab 1 — 投资解读
@@ -208,61 +208,6 @@ with tab2:
         st.info("暂无板块级数据")
 
 # ============================================================
-# Tab 3 — 历史案例
-# ============================================================
-with tab3:
-    cases = report.get("case_stories", [])
-    if cases:
-        profit_cases = [c for c in cases if c["profit"] > 0]
-        loss_cases = [c for c in cases if c["profit"] <= 0]
-
-        col_profit, col_loss = st.columns(2)
-        with col_profit:
-            st.markdown(f"""
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-                <div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div>
-                <span style="font-size:16px;font-weight:600;color:#1a1a2e;">盈利案例（{len(profit_cases)}个）</span>
-            </div>
-            """, unsafe_allow_html=True)
-            for c in profit_cases[:6]:
-                st.markdown(
-                    case_card(c["sector"], c["community"], c["year"],
-                              c["profit"], c["return_pct"], c["story"]),
-                    unsafe_allow_html=True,
-                )
-
-        with col_loss:
-            st.markdown(f"""
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
-                <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div>
-                <span style="font-size:16px;font-weight:600;color:#1a1a2e;">亏损案例（{len(loss_cases)}个）</span>
-            </div>
-            """, unsafe_allow_html=True)
-            for c in loss_cases[:6]:
-                st.markdown(
-                    case_card(c["sector"], c["community"], c["year"],
-                              c["profit"], c["return_pct"], c["story"]),
-                    unsafe_allow_html=True,
-                )
-
-        # Scatter chart
-        case_df = pd.DataFrame(cases)
-        if not case_df.empty:
-            fig_scatter = px.scatter(
-                case_df, x="year", y="return_pct",
-                size=[abs(p) + 1 for p in case_df["profit"]],
-                color=["盈利" if p > 0 else "亏损" for p in case_df["profit"]],
-                color_discrete_map={"盈利": COLORS["success"], "亏损": COLORS["danger"]},
-                hover_data=["sector", "community", "profit"],
-                labels={"year": "买入年份", "return_pct": "年化回报率(%)", "color": "盈亏"},
-                title="不同年份买入的年化回报率分布",
-            )
-            apply_plotly_style(fig_scatter, height=420)
-            st.plotly_chart(fig_scatter, use_container_width=True)
-    else:
-        st.info("暂无历史案例数据")
-
-# ============================================================
 # Tab 4 — 风险与估值
 # ============================================================
 with tab4:
@@ -306,10 +251,12 @@ with tab4:
 
     # ── 综合估值 ──
     detail = get_district_detail(selected_city, selected_district)
-    if not detail["communities"].empty:
+    latest_stats = detail.get("latest_stats")
+    if latest_stats is not None and not latest_stats.empty:
+        current_avg_price = latest_stats.iloc[0]["avg_unit_price"]
         valuation = composite_valuation(
             selected_city, selected_district,
-            current_price_per_sqm=detail["communities"]["avg_listing_price"].median(),
+            current_price_per_sqm=current_avg_price,
         )
         if "error" not in valuation:
             comp = valuation["composite"]
@@ -355,20 +302,3 @@ with tab4:
         apply_plotly_style(fig_trend, height=380)
         st.plotly_chart(fig_trend, use_container_width=True)
 
-# ── 区域内小区列表 ────────────────────────────────────────────
-st.markdown("")
-detail = get_district_detail(selected_city, selected_district)
-if not detail["communities"].empty:
-    comm = detail["communities"][["name", "build_year", "avg_listing_price", "listing_count", "property_fee"]].copy()
-    comm.columns = ["小区名称", "建成年份", "挂牌均价(元/㎡)", "在售套数", "物业费(元/㎡/月)"]
-    comm = comm.sort_values("挂牌均价(元/㎡)", ascending=False)
-    content_card(
-        f"区域内小区（{len(comm)}个）",
-        comm.to_html(index=False, classes="", border=0, escape=False, table_id="comm-table"),
-    )
-    st.markdown("""<style>
-    #comm-table { width:100%; border-collapse:collapse; font-size:14px; }
-    #comm-table th { background:#f8f9fc; padding:10px 12px; text-align:left; font-weight:600; color:#334155; border-bottom:2px solid #e2e8f0; }
-    #comm-table td { padding:10px 12px; border-bottom:1px solid #f0f0f5; color:#4a5568; }
-    #comm-table tr:hover td { background:#fafbfd; }
-    </style>""", unsafe_allow_html=True)

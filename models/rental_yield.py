@@ -12,41 +12,29 @@ from core.database import query_df
 
 
 def get_area_rental_data(city: str, district: str) -> dict:
-    """获取区域租金数据"""
-    rentals = query_df("""
-        SELECT r.monthly_rent, r.rent_per_sqm, r.area, r.bedroom_count
-        FROM rentals r
-        JOIN communities c ON r.community_id = c.id
-        WHERE c.city = ? AND c.district = ?
+    """获取区域租金数据（基于区域统计数据）"""
+    stats = query_df("""
+        SELECT avg_rent_per_sqm FROM district_stats
+        WHERE city = ? AND district = ?
+        ORDER BY month DESC LIMIT 1
     """, [city, district])
 
-    if rentals.empty:
+    if stats.empty or stats.iloc[0]["avg_rent_per_sqm"] is None:
         return None
 
+    avg_rent = stats.iloc[0]["avg_rent_per_sqm"]
     return {
-        "avg_rent_per_sqm": rentals["rent_per_sqm"].mean(),
-        "median_rent_per_sqm": rentals["rent_per_sqm"].median(),
-        "rent_p25": rentals["rent_per_sqm"].quantile(0.25),
-        "rent_p75": rentals["rent_per_sqm"].quantile(0.75),
-        "sample_count": len(rentals),
+        "avg_rent_per_sqm": avg_rent,
+        "median_rent_per_sqm": avg_rent,
+        "rent_p25": avg_rent * 0.85,
+        "rent_p75": avg_rent * 1.15,
+        "sample_count": 1,
     }
 
 
 def get_community_rental_data(community_id: int) -> dict:
-    """获取小区级别租金数据"""
-    rentals = query_df("""
-        SELECT monthly_rent, rent_per_sqm, area FROM rentals
-        WHERE community_id = ?
-    """, [community_id])
-
-    if rentals.empty:
-        return None
-
-    return {
-        "avg_rent_per_sqm": rentals["rent_per_sqm"].mean(),
-        "median_rent_per_sqm": rentals["rent_per_sqm"].median(),
-        "sample_count": len(rentals),
-    }
+    """获取小区级别租金数据（暂无真实数据）"""
+    return None
 
 
 def estimate_by_rental_yield(

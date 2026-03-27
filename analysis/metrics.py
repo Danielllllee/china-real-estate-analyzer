@@ -43,36 +43,6 @@ def get_city_overview(city: str) -> dict:
 
 def get_district_detail(city: str, district: str) -> dict:
     """获取区域详细数据"""
-    # 小区列表
-    communities = query_df("""
-        SELECT c.id, c.name, c.build_year, c.total_units, c.property_fee,
-               AVG(l.unit_price) as avg_listing_price,
-               COUNT(l.id) as listing_count
-        FROM communities c
-        LEFT JOIN listings l ON c.id = l.community_id
-        WHERE c.city = ? AND c.district = ?
-        GROUP BY c.id
-        ORDER BY avg_listing_price DESC
-    """, [city, district])
-
-    # 成交分布
-    txn_distribution = query_df("""
-        SELECT t.unit_price, t.area, t.deal_date, c.name as community_name
-        FROM transactions t
-        JOIN communities c ON t.community_id = c.id
-        WHERE c.city = ? AND c.district = ?
-        AND t.deal_date >= date('now', '-6 months')
-        ORDER BY t.deal_date DESC
-    """, [city, district])
-
-    # 租金分布
-    rent_distribution = query_df("""
-        SELECT r.rent_per_sqm, r.area, c.name as community_name
-        FROM rentals r
-        JOIN communities c ON r.community_id = c.id
-        WHERE c.city = ? AND c.district = ?
-    """, [city, district])
-
     # 价格趋势
     price_trend = query_df("""
         SELECT month, avg_unit_price, median_unit_price,
@@ -85,9 +55,6 @@ def get_district_detail(city: str, district: str) -> dict:
     return {
         "city": city,
         "district": district,
-        "communities": communities,
-        "txn_distribution": txn_distribution,
-        "rent_distribution": rent_distribution,
         "price_trend": price_trend,
     }
 
