@@ -1,0 +1,130 @@
+# 城市配置
+cities:
+  beijing:
+    name: 北京
+    districts:
+      - {name: 朝阳, code: chaoyang}
+      - {name: 海淀, code: haidian}
+      - {name: 西城, code: xicheng}
+      - {name: 东城, code: dongcheng}
+      - {name: 丰台, code: fengtai}
+      - {name: 通州, code: tongzhou}
+      - {name: 大兴, code: daxing}
+      - {name: 昌平, code: changping}
+  shanghai:
+    name: 上海
+    districts:
+      - {name: 浦东, code: pudong}
+      - {name: 徐汇, code: xuhui}
+      - {name: 静安, code: jingan}
+      - {name: 黄浦, code: huangpu}
+      - {name: 长宁, code: changning}
+      - {name: 闵行, code: minhang}
+      - {name: 宝山, code: baoshan}
+      - {name: 松江, code: songjiang}
+  shenzhen:
+    name: 深圳
+    districts:
+      - {name: 南山, code: nanshan}
+      - {name: 福田, code: futian}
+      - {name: 罗湖, code: luohu}
+      - {name: 宝安, code: baoan}
+      - {name: 龙华, code: longhua}
+      - {name: 龙岗, code: longgang}
+      - {name: 光明, code: guangming}
+  guangzhou:
+    name: 广州
+    districts:
+      - {name: 天河, code: tianhe}
+      - {name: 越秀, code: yuexiu}
+      - {name: 海珠, code: haizhu}
+      - {name: 荔湾, code: liwan}
+      - {name: 番禺, code: panyu}
+      - {name: 白云, code: baiyun}
+      - {name: 黄埔, code: huangpu_gz}
+  hangzhou:
+    name: 杭州
+    districts:
+      - {name: 西湖, code: xihu}
+      - {name: 拱墅, code: gongshu}
+      - {name: 上城, code: shangcheng}
+      - {name: 滨江, code: binjiang}
+      - {name: 余杭, code: yuhang}
+      - {name: 萧山, code: xiaoshan}
+  chengdu:
+    name: 成都
+    districts:
+      - {name: 锦江, code: jinjiang}
+      - {name: 青羊, code: qingyang}
+      - {name: 武侯, code: wuhou}
+      - {name: 高新, code: gaoxin}
+      - {name: 天府新区, code: tianfu}
+      - {name: 龙泉驿, code: longquanyi}
+  fuzhou:
+    name: 福州
+    districts:
+      - {name: 鼓楼, code: gulou}
+      - {name: 台江, code: taijiang}
+      - {name: 仓山, code: cangshan}
+      - {name: 晋安, code: jinan}
+      - {name: 马尾, code: mawei}
+      - {name: 长乐, code: changle}
+      - {name: 闽侯, code: minhou}
+  xiamen:
+    name: 厦门
+    districts:
+      - {name: 思明, code: siming}
+      - {name: 湖里, code: huli}
+      - {name: 集美, code: jimei}
+      - {name: 海沧, code: haicang}
+      - {name: 同安, code: tongan}
+      - {name: 翔安, code: xiangan}
+  quanzhou:
+    name: 泉州
+    districts:
+      - {name: 鲤城, code: licheng}
+      - {name: 丰泽, code: fengze}
+      - {name: 洛江, code: luojiang}
+      - {name: 晋江, code: jinjiang_qz}
+      - {name: 石狮, code: shishi}
+      - {name: 南安, code: nanan}
+
+# 估值模型参数
+valuation:
+  # 无风险利率（10年期国债收益率）
+  risk_free_rate: 0.025
+  # 房产风险溢价
+  property_risk_premium: 0.025
+  # 合理租金收益率区间
+  reasonable_yield_range: [0.04, 0.06]
+  # DCF参数
+  dcf:
+    projection_years: 30
+    rent_growth_rate: 0.02
+    terminal_cap_rate: 0.05
+  # 成本法参数
+  cost:
+    construction_cost_per_sqm: [2500, 4000]  # 元/平米
+    developer_margin: 0.12
+
+# 交易成本参数
+transaction:
+  deed_tax_first: 0.01      # 首套≤90㎡
+  deed_tax_first_large: 0.015  # 首套>90㎡
+  deed_tax_second: 0.02     # 二套
+  agency_fee: 0.015          # 中介费
+  maintenance_fund: 0.02     # 维修基金（按房价比例估算）
+
+# 持有成本参数
+holding:
+  property_fee_per_sqm_month: [2, 8]  # 物业费 元/㎡/月
+  vacancy_rate: 0.05          # 空置率
+  maintenance_annual: 0.005   # 年维护费（占房价比例）
+
+# 贷款参数
+mortgage:
+  commercial_rate: 0.037     # 商贷利率
+  provident_rate: 0.0275     # 公积金利率
+  max_years: 30
+  down_payment_first: 0.30   # 首套首付比例
+  down_payment_second: 0.40  # 二套首付比例
