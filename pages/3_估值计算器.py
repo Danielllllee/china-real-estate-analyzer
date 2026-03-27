@@ -1,169 +1,119 @@
-"""单套房产估值计算器 — Premium UI"""
+"""估值计算器 — 基于真实租金数据的租金收益率法估值"""
 import streamlit as st
-import plotly.graph_objects as go
 import sys, os
-# 确保项目根目录在 sys.path 中（兼容 Streamlit Cloud）
+import yaml
+
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
-from models.composite import composite_valuation
-from core.styles import inject_global_css, hero_section, metric_card, apply_plotly_style, get_district_names, PLOTLY_COLORS, COLORS
-import yaml
+from core.database import query_df
+from core.styles import inject_global_css, hero_section, metric_card, get_district_names, COLORS
+from models.rental_yield import get_area_rental_data, estimate_by_rental_yield, evaluate_current_price
 
 st.set_page_config(page_title="估值计算器", page_icon="🧮", layout="wide")
 inject_global_css()
+hero_section("估值计算器", "基于真实租金数据的租金收益率法估值")
 
+# ── 配置 ──
 @st.cache_data
 def load_config():
-    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.yaml")
+    config_path = os.path.join(_ROOT, "config.yaml")
     with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 config = load_config()
+city_names = {k: v["name"] for k, v in config["cities"].items()}
 
-hero_section("估值计算器", "输入房产信息，四大模型综合估值，精准定价")
+# ── 选择城市/区域 ──
+c1, c2, _ = st.columns([1, 1, 2])
+with c1:
+    selected_city = st.selectbox("选择城市", list(city_names.values()), label_visibility="collapsed")
+city_key = [k for k, v in config["cities"].items() if v["name"] == selected_city][0]
+district_pairs = get_district_names(config["cities"][city_key])
+with c2:
+    sel_idx = st.selectbox("选择区域", range(len(district_pairs)),
+                           format_func=lambda i: district_pairs[i][0], label_visibility="collapsed")
+    selected_district = district_pairs[sel_idx][1]
 
-# 输入表单卡片
-st.markdown('<div class="content-card">', unsafe_allow_html=True)
-st.markdown("#### 房产基本信息")
-col1, col2, col3 = st.columns(3)
+# ── 获取数据 ──
+rental = get_area_rental_data(selected_city, selected_district)
+price_data = query_df("""
+    SELECT avg_unit_price FROM district_stats
+    WHERE city = ? AND district = ? ORDER BY month DESC LIMIT 1
+""", [selected_city, selected_district])
 
-with col1:
-    city_names = {k: v["name"] for k, v in config["cities"].items()}
-    selected_city = st.selectbox("城市", list(city_names.values()))
-    city_key = [k for k, v in config["cities"].items() if v["name"] == selected_city][0]
-    dp = get_district_names(config["cities"][city_key])
-    sel_d = st.selectbox("区域", range(len(dp)), format_func=lambda i: dp[i][0])
-    selected_district = dp[sel_d][1]
+if price_data.empty:
+    st.warning("暂无该区域房价数据")
+    st.stop()
 
-with col2:
-    area = st.number_input("面积（㎡）", min_value=20, max_value=500, value=90)
-    building_age = st.number_input("房龄（年）", min_value=0, max_value=50, value=10)
+current_price = price_data.iloc[0]["avg_unit_price"]
 
-with col3:
-    floor_level = st.selectbox("楼层", ["low", "mid", "mid_high", "high"],
-                                format_func=lambda x: {"low": "低楼层(1-6)", "mid": "中楼层(7-15)",
-                                                        "mid_high": "中高(16-25)", "high": "高楼层(26+)"}[x])
-    decoration = st.selectbox("装修", ["rough", "simple", "fine", "luxury"],
-                               format_func=lambda x: {"rough": "毛坯", "simple": "简装",
-                                                       "fine": "精装", "luxury": "豪装"}[x])
+if rental is None:
+    st.info(f"暂无 {selected_city}·{selected_district} 的租金数据，无法进行租金收益率法估值。")
+    st.markdown(f"当前二手房均价：**{current_price:,.0f} 元/㎡**")
+    st.stop()
 
-col4, col5, _ = st.columns(3)
-with col4:
-    orientation = st.selectbox("朝向", ["south", "south_north", "east", "west", "north"],
-                                format_func=lambda x: {"south": "南", "south_north": "南北通透",
-                                                        "east": "东", "west": "西", "north": "北"}[x])
-with col5:
-    current_price = st.number_input("当前挂牌价（元/㎡，选填，0=不对比）", min_value=0, value=0)
+# ── 参数调整 ──
+st.markdown("---")
+st.markdown(f'<h3 style="color:{COLORS["primary"]};">估值参数</h3>', unsafe_allow_html=True)
 
-calc_btn = st.button("开始估值", type="primary", use_container_width=True)
-st.markdown('</div>', unsafe_allow_html=True)
+p1, p2, p3 = st.columns(3)
+with p1:
+    risk_free = st.slider("无风险利率（10年期国债）", 0.01, 0.05, 0.025, 0.005, format="%.3f")
+with p2:
+    risk_premium = st.slider("房产风险溢价", 0.01, 0.06, 0.025, 0.005, format="%.3f")
+with p3:
+    vacancy = st.slider("空置率", 0.0, 0.15, 0.05, 0.01, format="%.2f")
 
-if calc_btn:
-    with st.spinner("四大模型计算中..."):
-        result = composite_valuation(
-            city=selected_city, district=selected_district,
-            area=area, floor_level=floor_level, decoration=decoration,
-            building_age=building_age, orientation=orientation,
-            current_price_per_sqm=current_price if current_price > 0 else None,
-        )
+# ── 计算估值 ──
+monthly_rent = rental["avg_rent_per_sqm"]
+annual_rent = monthly_rent * 12
 
-    if "error" in result:
-        st.error(result["error"])
-        st.stop()
+valuation = estimate_by_rental_yield(
+    annual_rent_per_sqm=annual_rent,
+    risk_free_rate=risk_free,
+    risk_premium=risk_premium,
+    vacancy_rate=vacancy,
+)
 
-    comp = result["composite"]
+evaluation = evaluate_current_price(current_price, valuation)
 
-    # 结果卡片
-    st.markdown("### 综合估值结果")
-    cols = st.columns(3)
-    with cols[0]:
-        st.markdown(metric_card("🛡", "保守估值", f"{comp['conservative_value']:,} 元/㎡",
-                                 f"总价 {comp['conservative_total_price']} 万", "warning"),
-                    unsafe_allow_html=True)
-    with cols[1]:
-        st.markdown(metric_card("🎯", "中性估值", f"{comp['fair_value_per_sqm']:,} 元/㎡",
-                                 f"总价 {comp['fair_total_price']} 万", "info"),
-                    unsafe_allow_html=True)
-    with cols[2]:
-        st.markdown(metric_card("🚀", "乐观估值", f"{comp['optimistic_value']:,} 元/㎡",
-                                 f"总价 {comp['optimistic_total_price']} 万", "success"),
-                    unsafe_allow_html=True)
+# ── 展示结果 ──
+st.markdown("---")
+st.markdown(f'<h3 style="color:{COLORS["primary"]};">估值结果</h3>', unsafe_allow_html=True)
 
-    # 偏离度评估
-    if "composite_assessment" in result:
-        ca = result["composite_assessment"]
-        dev = float(ca["deviation_pct"].strip("%+"))
-        color = COLORS["success"] if dev < 0 else COLORS["danger"]
-        st.markdown(f"""
-        <div class="content-card" style="border-left:4px solid {color};">
-            <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div>
-                    <div style="font-size:14px;color:#94a3b8;">当前挂牌价 vs 综合估值</div>
-                    <div style="font-size:24px;font-weight:700;color:{color};margin:8px 0;">{ca['deviation_pct']}</div>
-                </div>
-                <div style="font-size:15px;color:#2c3e50;max-width:60%;">{ca['recommendation']}</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+v1, v2, v3, v4 = st.columns(4)
+with v1:
+    st.markdown(metric_card("🏠", "当前均价", f"{current_price:,.0f} 元/㎡"), unsafe_allow_html=True)
+with v2:
+    st.markdown(metric_card("📊", "合理估值", f"{valuation['fair_value_per_sqm']:,.0f} 元/㎡"), unsafe_allow_html=True)
+with v3:
+    st.markdown(metric_card("📈", "偏离度", evaluation["deviation_pct"]), unsafe_allow_html=True)
+with v4:
+    st.markdown(metric_card("🎯", "评估", evaluation["assessment"]), unsafe_allow_html=True)
 
-    # 各模型对比图
-    st.markdown("### 各模型估值对比")
-    models = result["models"]
-    model_names, fair_vals, cons_vals, opt_vals = [], [], [], []
+# 详情
+st.markdown("---")
+st.markdown(f'<h3 style="color:{COLORS["primary"]};">详细数据</h3>', unsafe_allow_html=True)
 
-    for key, model in models.items():
-        if "fair_value_per_sqm" in model:
-            model_names.append(model["model_name"])
-            fair_vals.append(model["fair_value_per_sqm"])
-            cons_vals.append(model["conservative_value"])
-            opt_vals.append(model["optimistic_value"])
+d1, d2 = st.columns(2)
+with d1:
+    st.markdown("**租金数据**")
+    st.write(f"- 月租金均价：{monthly_rent:.0f} 元/㎡/月")
+    st.write(f"- 年租金：{annual_rent:.0f} 元/㎡/年")
+    st.write(f"- 实际租金回报率：{evaluation['actual_yield_pct']}")
+    st.write(f"- 90㎡年租金收入：{annual_rent * 90 / 10000:.1f} 万元")
 
-    if model_names:
-        fig = go.Figure()
-        fig.add_trace(go.Bar(name="保守", x=model_names, y=cons_vals, marker_color=COLORS["warning"]))
-        fig.add_trace(go.Bar(name="中性", x=model_names, y=fair_vals, marker_color=COLORS["primary"]))
-        fig.add_trace(go.Bar(name="乐观", x=model_names, y=opt_vals, marker_color=COLORS["success"]))
-        if current_price > 0:
-            fig.add_hline(y=current_price, line_dash="dash", line_color=COLORS["accent"],
-                          annotation_text=f"挂牌价 {current_price:,}")
-        fig.update_layout(barmode="group", yaxis_title="元/㎡")
-        apply_plotly_style(fig, 420)
-        st.plotly_chart(fig, use_container_width=True)
+with d2:
+    st.markdown("**估值区间**")
+    st.write(f"- 保守估值：{valuation['conservative_value']:,.0f} 元/㎡")
+    st.write(f"- 中性估值：{valuation['fair_value_per_sqm']:,.0f} 元/㎡")
+    st.write(f"- 乐观估值：{valuation['optimistic_value']:,.0f} 元/㎡")
+    st.write(f"- 资本化率(Cap Rate)：{valuation['cap_rate']*100:.1f}%")
 
-    # 模型详情 tabs
-    st.markdown("### 模型参数详情")
-    model_tabs = st.tabs([m["model_name"] for m in models.values() if "fair_value_per_sqm" in m])
-    for tab, (key, model) in zip(model_tabs, [(k, v) for k, v in models.items() if "fair_value_per_sqm" in v]):
-        with tab:
-            if key == "rental_yield":
-                c1, c2, c3 = st.columns(3)
-                c1.metric("年毛租金", f"{model.get('gross_annual_rent_per_sqm', 'N/A')} 元/㎡")
-                c2.metric("资本化率", f"{model.get('cap_rate', 0)*100:.2f}%")
-                c3.metric("无风险利率", f"{model.get('risk_free_rate', 0)*100:.2f}%")
-            elif key == "comparable":
-                c1, c2, c3 = st.columns(3)
-                c1.metric("可比样本数", model.get("sample_count", "N/A"))
-                c2.metric("价格区间", f"{model.get('price_range', ['N/A'])[0]:,} - {model.get('price_range', ['','N/A'])[1]:,}")
-                c3.metric("标准差", f"{model.get('std_dev', 'N/A'):,}")
-            elif key == "dcf":
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("折现率", f"{model.get('discount_rate', 0)*100:.2f}%")
-                c2.metric("租金增长率", f"{model.get('rent_growth_rate', 0)*100:.2f}%")
-                c3.metric("终值占比", f"{model.get('terminal_share', 'N/A')}%")
-                c4.metric("预测期", f"{model.get('projection_years', 'N/A')} 年")
-            elif key == "cost_approach":
-                c1, c2, c3 = st.columns(3)
-                c1.metric("土地楼面价", f"{model.get('land_cost', 'N/A'):,} 元/㎡")
-                c2.metric("建造成本", f"{model.get('construction_cost', 'N/A'):,} 元/㎡")
-                c3.metric("开发商利润", f"{model.get('developer_margin', 0)*100:.1f}%")
-                if "cost_breakdown" in model:
-                    st.markdown("**成本构成明细：**")
-                    bd = model["cost_breakdown"]
-                    fig_pie = go.Figure(go.Pie(
-                        labels=list(bd.keys()), values=list(bd.values()),
-                        hole=0.4, marker_colors=PLOTLY_COLORS,
-                    ))
-                    apply_plotly_style(fig_pie, 300)
-                    st.plotly_chart(fig_pie, use_container_width=True)
+st.caption(
+    "注：租金收益率法是房产估值的基本方法之一。合理价格 = 净年租金 / 资本化率。"
+    "资本化率 = 无风险利率 + 房产风险溢价。该方法假设房产价值取决于其产生的现金流。"
+    "租金数据来源于21经济网、中指云等机构报告，仅供参考。"
+)
